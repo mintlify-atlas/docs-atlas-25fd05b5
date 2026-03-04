@@ -1,0 +1,113 @@
+{
+  "projectType": "saas",
+  "projectName": "Poge",
+  "projectDescription": "A lightweight PostgreSQL database management tool with an intuitive UI for running queries, exploring tables, and managing your database.",
+  "theme": "palm",
+  "primaryColor": "#0cac45",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/query-tool",
+              "features/table-viewer",
+              "features/schema-explorer",
+              "features/notes-and-history",
+              "features/data-export-import"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/overview",
+              "security/encryption",
+              "security/session-management"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/deployment",
+              "self-hosting/configuration",
+              "self-hosting/backup-restore"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/troubleshooting",
+              "resources/keyboard-shortcuts",
+              "resources/changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/test-connection",
+              "api/query-execution",
+              "api/schema-operations",
+              "api/table-operations",
+              "api/statistics"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types/server-connection",
+              "api/types/database-objects",
+              "api/types/query-results"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "SQL query editor with syntax highlighting and query history",
+    "Table viewer with data browsing and inline editing",
+    "Schema explorer with database tree navigation",
+    "Encrypted backup and restore with AES-256",
+    "Local-first architecture with browser storage",
+    "Session management with PIN protection",
+    "Notes and scratch pad for quick reference",
+    "Export data to CSV, JSON, or Excel formats",
+    "Multi-statement query execution with transaction support",
+    "Connection pooling and query optimization"
+  ],
+  "publicApiSurface": [
+    "POST /api/test-connection - Test database connection",
+    "POST /api/query - Execute SQL queries",
+    "GET /api/schema/tree - Fetch database schema tree",
+    "GET /api/table-data - Retrieve table data with pagination",
+    "GET /api/stats/pools - Get connection pool statistics",
+    "GET /api/stats/cache - Get query cache statistics",
+    "ServerConnection interface",
+    "TableDefinition interface",
+    "QueryExecutionResult interface",
+    "DatabaseObject interface"
+  ]
+}
