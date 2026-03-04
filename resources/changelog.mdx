@@ -1,0 +1,131 @@
+---
+title: Changelog
+description: Version history and release notes for Poge
+---
+
+This page tracks all notable changes, improvements, and bug fixes in Poge releases.
+
+## Version 0.3.0
+
+**New Features:**
+- Introduced a new first-time setup wizard with demo images and easy setup process to help new users get started quickly
+
+**Bug Fixes:**
+- Fixed a bug that caused incorrect scrolling behavior in the Query Tool editor
+- Fixed improper line number alignment in the Query Tool editor
+
+---
+
+## Version 0.2.5
+
+**New Features:**
+- Introduced keyboard shortcuts for running queries with a modular setup to allow adding more shortcuts in the future
+  - Run queries with `⌘ + Enter` (macOS) or `Ctrl + Enter` (Windows/Linux)
+
+**Improvements:**
+- Minor fixes and improvements in the settings UI
+
+---
+
+## Version 0.2.1
+
+**Bug Fixes:**
+- **Fixed Query Tool CRUD Actions**: Add, edit, delete, and download buttons now work properly - they were using stale query content
+- **Improved Edit Table Dialog**: Fixed SQL errors with empty fields, made dialog wider for better visibility, and adjusted positioning
+
+**New Features:**
+- **Added Row/Column Dialogs**: Add buttons now open proper dialogs instead of placeholder messages
+
+**Improvements:**
+- **Better Saved Queries**: Queries sync immediately, delete works properly, and added hover-visible Load button on cards
+- **Upgraded Notifications**: Switched to Sonner for toast notifications with proper styling
+- **UI Polish**: Moved delete button to top-right, removed edit option, and updated sidebar link to GitHub issues
+
+---
+
+## Version 0.2
+
+**Major Updates:**
+- **Major UI/UX Overhaul**: Complete visual redesign with a new color palette, typography, and layout for a more modern and polished experience
+- **Enhanced Security Controls**: Resolved critical issues with the auto-lock mechanism. The application now strictly adheres to user-defined timeout settings
+- **Polished Interactions**: Smoother transitions and better feedback across the application
+
+---
+
+## Version 0.1
+
+**Initial Release:**
+- Core features: Connect to multiple PostgreSQL servers, run SQL queries, and explore schemas
+- Secure local storage with AES-256 encryption and PIN protection
+- Local-first architecture - all data stays in your browser
+- Query Tool with syntax highlighting
+- Schema browser for tables, columns, and relationships
+- Export/import functionality for connections and settings
+
+---
+
+## Release Philosophy
+
+Poge follows these principles for releases:
+
+- **Incremental improvements**: Regular updates with focused changes
+- **Stability first**: Thorough testing before releases
+- **User feedback**: Issues and feature requests guide development priorities
+- **Backward compatibility**: Settings and data exports remain compatible across versions when possible
+
+<Info>
+  Only the latest version of Poge receives security updates. Always use the latest version from [poge.dev](https://poge.dev) or the main branch on GitHub.
+</Info>
+
+## Staying Updated
+
+To stay informed about new releases:
+
+1. **Watch the repository** on [GitHub](https://github.com/dev-hari-prasad/poge) for release notifications
+2. **Visit poge.dev** - the hosted version is always up-to-date with the latest release
+3. **Check this changelog** periodically to see what's new
+
+If you're self-hosting Poge:
+
+```bash
+# Pull the latest changes
+git pull origin main
+
+# Install any new dependencies
+pnpm install
+
+# Rebuild the application
+pnpm run build
+```
+
+## Contributing
+
+Interested in contributing to Poge? Check out the [GitHub repository](https://github.com/dev-hari-prasad/poge) for:
+
+- Open issues that need attention
+- Feature requests from the community
+- Contributing guidelines
+
+<Info>
+  Pull requests are welcome! Keep changes small and focused, and prefer clear, straightforward code over cleverness.
+</Info>
+
+## Version Support
+
+Poge is a fast-moving project focused on the latest version:
+
+- **Latest version**: Full support with bug fixes and security updates
+- **Previous versions**: No active support - users are encouraged to upgrade
+- **Forked versions**: Community-maintained forks follow their own release schedule
+
+## Reporting Issues
+
+Found a bug or have a feature request?
+
+1. Check the changelog to see if it's already been addressed
+2. Search [existing issues](https://github.com/dev-hari-prasad/poge/issues) to avoid duplicates
+3. Open a new issue with clear details and reproduction steps
+
+<Warning>
+  For security vulnerabilities, **do not** open a public issue. Follow the private reporting process outlined in the [Security Policy](https://github.com/dev-hari-prasad/poge?tab=security-ov-file).
+</Warning>

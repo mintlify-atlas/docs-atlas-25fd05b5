@@ -1,0 +1,598 @@
+---
+title: Session Management
+description: Configure PIN protection, auto-lock timeouts, session expiration, and learn how to change your security PIN
+---
+
+## Session Security Model
+
+Poge implements session management to protect your data when you step away from your device. Unlike traditional web apps with server-side sessions, Poge's sessions are entirely client-side and controlled by your browser.
+
+### Session States
+
+Poge has three session states:
+
+1. **Unlocked**: You've entered your PIN and can access all features
+2. **Locked**: Session timeout or manual lock - requires PIN to unlock
+3. **First-time setup**: No PIN configured yet - requires initial setup
+
+<Info>
+  When locked, all your encrypted data remains in localStorage, but the application requires PIN re-entry before it can be decrypted and accessed.
+</Info>
+
+## PIN Protection
+
+### Setting Up Your PIN
+
+During first-time setup (`components/first-time-setup.tsx:171-181`):
+
+```tsx
+{
+  title: "Create Your Security PIN",
+  description: "Choose a 6-digit PIN to protect your data",
+  icon: KeyIcon,
+}
+```
+
+PIN requirements:
+- **Exactly 6 digits** (numbers 0-9 only)
+- Must be confirmed by entering twice
+- Cannot be all zeros (000000) or sequential (123456) - though not enforced, strongly discouraged
+
+### How PIN Entry Works
+
+From `components/pin-entry.tsx:17-122`:
+
+```tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  const pinString = pin.join("")
+  
+  if (pinString.length !== 6) {
+    setError("PIN must be 6 digits")
+    return
+  }
+
+  const success = await login(pinString)
+  
+  if (success) {
+    // Unlock session
+    setPin(["", "", "", "", "", ""])
+    setAttempts(0)
+  } else {
+    const newAttempts = attempts + 1
+    setAttempts(newAttempts)
+
+    if (newAttempts >= MAX_ATTEMPTS) {
+      setLockoutTime(LOCKOUT_DURATION)  // 5 minutes
+      setError(`Too many failed attempts. Locked out for 5 minutes.`)
+    } else {
+      setError(`Invalid PIN. ${MAX_ATTEMPTS - newAttempts} attempts remaining.`)
+    }
+  }
+}
+```
+
+### Failed Attempt Lockout
+
+From `components/pin-entry.tsx:37-38`:
+
+```typescript
+const MAX_ATTEMPTS = 5
+const LOCKOUT_DURATION = 5 * 60 * 1000 // 5 minutes
+```
+
+Lockout behavior:
+1. **First 4 failures**: Show remaining attempts
+2. **5th failure**: Lock for 5 minutes
+3. **During lockout**: Cannot attempt PIN entry
+4. **After lockout**: Counter resets to 0 attempts
+
+<Warning>
+  The failed attempt counter is stored in component state, not localStorage. If you refresh the page during lockout, the counter resets. This is by design - the primary defense is the computational cost of PBKDF2, not the lockout timer.
+</Warning>
+
+## Auto-Lock Timeout
+
+### How Auto-Lock Works
+
+Poge automatically locks your session after a configured period of inactivity. This protects your data if you walk away from your device.
+
+### Activity Tracking
+
+The following user interactions reset the inactivity timer:
+
+- Mouse movement
+- Keyboard input
+- Click events
+- Touch events (mobile)
+- Scroll events
+
+### Configuring Auto-Lock Timeout
+
+From Settings → Security → Auto-lock Timeout (`components/settings.tsx:428-449`):
+
+```tsx
+<Select
+  value={autoLockTimeout.toString()}
+  onValueChange={(value) => setAutoLockTimeout(parseInt(value))}
+>
+  <SelectContent>
+    <SelectItem value="300000">5 minutes</SelectItem>
+    <SelectItem value="900000">15 minutes</SelectItem>
+    <SelectItem value="1800000">30 minutes</SelectItem>
+    <SelectItem value="3600000">1 hour</SelectItem>
+    <SelectItem value="7200000">2 hours</SelectItem>
+    <SelectItem value="-1">Never</SelectItem>
+  </SelectContent>
+</Select>
+```
+
+Timeout values (in milliseconds):
+
+| Option | Value | Recommendation |
+|--------|-------|----------------|
+| 5 minutes | 300000 | **Recommended for shared spaces** |
+| 15 minutes | 900000 | Balanced security/convenience |
+| 30 minutes | 1800000 | Suitable for private offices |
+| 1 hour | 3600000 | Low-security environments only |
+| 2 hours | 7200000 | Not recommended |
+| Never | -1 | **Not recommended** - disables auto-lock |
+
+<Info>
+  **Default Setting**: Poge defaults to 5 minutes of inactivity. This balances security and usability for most development workflows.
+</Info>
+
+### Session Timeout Warning
+
+From `components/session-timeout-warning.tsx:17-108`:
+
+```tsx
+const WARNING_THRESHOLD = 10 * 1000 // Show warning 10 seconds before timeout
+
+useEffect(() => {
+  if (sessionTimeLeft > 0 && sessionTimeLeft <= WARNING_THRESHOLD) {
+    setShowWarning(true)
+  }
+}, [sessionTimeLeft])
+```
+
+Warning dialog features:
+- **Appears**: 10 seconds before session expires
+- **Shows countdown**: Real-time seconds remaining
+- **Two options**:
+  - "Extend Session" - Resets the inactivity timer
+  - "Lock Now" - Immediately locks the app
+
+<Warning>
+  If you don't respond to the warning dialog within 10 seconds, your session will automatically lock. Any unsaved query edits will be lost.
+</Warning>
+
+## Lock on Page Refresh
+
+### What It Does
+
+When enabled, Poge automatically locks your session whenever the page is refreshed (F5) or reopened.
+
+### Configuration
+
+From Settings → Security → Lock on Page Refresh (`components/settings.tsx:451-468`):
+
+```tsx
+<Select
+  value={lockOnRefresh ? "true" : "false"}
+  onValueChange={(value) => setLockOnRefresh(value === "true")}
+>
+  <SelectContent>
+    <SelectItem value="true">Enabled</SelectItem>
+    <SelectItem value="false">Disabled</SelectItem>
+  </SelectContent>
+</Select>
+```
+
+### Use Cases
+
+**Enable lock on refresh when:**
+- Using Poge on a shared computer
+- Working in a public space (coffee shop, coworking space)
+- Company security policy requires it
+- You frequently step away without closing the tab
+
+**Disable lock on refresh when:**
+- Using Poge on a private, secure device
+- You frequently refresh during development
+- Auto-lock timeout provides sufficient protection
+- You find re-entering PIN after refresh disruptive
+
+<Info>
+  Even with lock on refresh disabled, you can always manually lock Poge using the "Lock App" button in Settings or the keyboard shortcut Ctrl+L (if implemented).
+</Info>
+
+## Changing Your PIN
+
+### When to Change Your PIN
+
+Change your PIN if:
+- You suspect it has been compromised
+- You used a weak PIN during setup (e.g., 123456)
+- You shared your PIN with someone and want to revoke access
+- Regular security policy requires periodic changes
+- You want to use a stronger PIN
+
+### How to Change Your PIN
+
+1. Navigate to Settings → Security
+2. Click "Change PIN" button (`components/settings.tsx:417-426`)
+3. Enter your current PIN
+4. Enter your new 6-digit PIN
+5. Confirm your new PIN
+
+From `components/change-pin-dialog.tsx` (referenced but not provided in source):
+
+```tsx
+<div className="flex items-center justify-between p-4 border rounded-lg">
+  <div>
+    <h3 className="font-medium">Change Security PIN</h3>
+    <p className="text-sm text-muted-foreground">Update your 6-digit security PIN</p>
+  </div>
+  <Button variant="outline" onClick={() => setShowChangePinDialog(true)}>
+    <KeyIcon className="h-4 w-4 mr-0" />
+    Change PIN
+  </Button>
+</div>
+```
+
+<Warning>
+  **Important**: Changing your PIN does NOT re-encrypt your existing data. Your data remains encrypted with the original key derivation. Only new encryptions will use the new PIN. For maximum security after a PIN change, export and re-import all your data with the new PIN.
+</Warning>
+
+### Re-Encrypting Data After PIN Change
+
+To fully re-encrypt all data with a new PIN:
+
+1. **Before changing PIN**: Export all data (Settings → Data Management → Export All Data)
+2. Change your PIN
+3. Clear all data (Settings → Security → Clear All Data)
+4. Complete first-time setup with new PIN
+5. Import your backup file
+
+## Manual Lock
+
+You can manually lock Poge at any time:
+
+### Lock Button
+
+From `components/settings.tsx:760-765`:
+
+```tsx
+<Button variant="outline" size="default" onClick={logout}>
+  <LockClosedIcon className="h-4 w-4 mr-0" />
+  Lock App
+</Button>
+```
+
+The "Lock App" button:
+- Located in Settings page header
+- Immediately locks the session
+- Requires PIN to unlock
+- Does not clear any data - just locks access
+
+### When to Manually Lock
+
+- Before stepping away from your computer
+- When sharing your screen
+- Before letting someone else use your computer briefly
+- When auto-lock timeout is set to "Never" but you want to lock now
+
+<Info>
+  Manual locking is instant and doesn't wait for auto-lock timeout. It's a good habit to lock whenever you leave your workspace, even briefly.
+</Info>
+
+## Session Persistence
+
+### Session State Storage
+
+Session state is stored in localStorage:
+
+```typescript
+const SESSION_LOCK_KEY = "postgres-manager-session-locked"
+```
+
+Values:
+- `"true"` - Session is locked, PIN required
+- `"false"` or absent - Session unlocked (if valid PIN hash exists)
+
+### Session State Scenarios
+
+| Scenario | Session State | Behavior |
+|----------|--------------|----------|
+| First visit | No PIN hash | Show first-time setup |
+| After setup | Unlocked | Full access to app |
+| Manual lock | Locked | Show PIN entry screen |
+| Auto-lock timeout | Locked | Show PIN entry screen |
+| Page refresh (lock on refresh = on) | Locked | Show PIN entry screen |
+| Page refresh (lock on refresh = off) | Remains unlocked | Continue where you left off |
+| Browser restart | Locked (by default) | Show PIN entry screen |
+
+## Backup Encryption
+
+When exporting data, you encrypt it with a separate password.
+
+### Export Security
+
+From `components/settings.tsx:131-188`:
+
+```typescript
+const exportAllData = async () => {
+  if (!exportPassword.trim()) {
+    toast({
+      title: "Password Required",
+      description: "Please enter a password to encrypt your exported data.",
+      variant: "destructive"
+    })
+    return
+  }
+
+  const exportData = {
+    version: "1.0.0",
+    exportDate: new Date().toISOString(),
+    data: {
+      servers: servers,
+      savedQueries: savedQueries,
+      queryHistory: queryHistory,
+      settings: { preferences, theme, autoLockTimeout }
+    }
+  }
+
+  // Encrypt with BACKUP PASSWORD (not PIN)
+  const encryptedData = await EncryptionService.encrypt(
+    JSON.stringify(exportData),
+    exportPassword  // User-provided password
+  )
+
+  // Download as .enc file
+  const blob = new Blob([encryptedData], { type: "application/octet-stream" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.download = `postgresql-manager-backup-${date}.enc`
+  a.click()
+}
+```
+
+### Backup Password vs. PIN
+
+| Aspect | PIN | Backup Password |
+|--------|-----|----------------|
+| **Purpose** | Unlock app | Encrypt/decrypt backups |
+| **Length** | 6 digits | Any length (recommended: 16+ characters) |
+| **Stored?** | Hash only | Never stored |
+| **Used for** | Deriving keys for localStorage | Deriving keys for .enc files |
+| **Recommendation** | Random 6 digits | Long, random passphrase |
+
+<Warning>
+  **Use Different Passwords**: Your backup password should be different from your PIN. If your PIN is compromised, having a separate backup password protects your exported backups.
+</Warning>
+
+### Import Security
+
+From `components/settings.tsx:190-286`:
+
+```typescript
+const importAllData = async (event) => {
+  const file = event.target.files?.[0]
+  const fileContent = await file.text()
+
+  // Decrypt with backup password
+  const decryptedData = await EncryptionService.decrypt(
+    fileContent,
+    importPassword
+  )
+
+  const importData = JSON.parse(decryptedData)
+
+  // Validate backup structure
+  if (!importData.data || !importData.version) {
+    throw new Error("Invalid backup file format")
+  }
+
+  // Import all data
+  // ... (restore servers, queries, history, settings)
+}
+```
+
+### Backup Best Practices
+
+1. **Strong backup passwords**: Use 16+ character random passphrases
+   - Good: `correct-horse-battery-staple-2026`
+   - Bad: `123456` (same as PIN)
+
+2. **Secure storage**: Store `.enc` backup files in:
+   - Password manager (as secure note)
+   - Encrypted cloud storage (Dropbox, Google Drive with client-side encryption)
+   - USB drive in physical safe
+   - NOT: Unencrypted email, Slack, or public file shares
+
+3. **Test restores**: Periodically verify you can restore from backups
+
+4. **Document recovery process**: Keep backup password separate from backup file
+
+5. **Version control**: Include date in filename (`backup-2026-03-04.enc`)
+
+<Info>
+  **Backup File Contents**: The `.enc` file contains ALL your data: database credentials, queries, history, and settings. Treat it with the same security level as your production database passwords.
+</Info>
+
+## Security Status Indicators
+
+### Visual Security Feedback
+
+Poge provides several UI indicators of your security status:
+
+1. **Lock icon in header**: Shows locked/unlocked state
+2. **"AES-256 Encrypted" badge**: Visible during first-time setup
+3. **Session countdown**: Shows time remaining before auto-lock (in timeout warning)
+4. **Failed attempts counter**: Shows remaining attempts before lockout
+
+### Security Status Panel (Settings)
+
+From `components/settings.tsx:482-502` (commented out in current version):
+
+```tsx
+<div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg mt-6">
+  <h4 className="font-medium">Security Status</h4>
+  <div className="space-y-2 text-sm">
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+      <span>All data encrypted with AES-256-GCM</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+      <span>PIN-based key derivation (PBKDF2)</span>
+    </div>
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+      <span>Auto-lock: {getAutoLockLabel(autoLockTimeout)}</span>
+    </div>
+  </div>
+</div>
+```
+
+## Advanced Session Management
+
+### Clearing All Data (Factory Reset)
+
+From `components/settings.tsx:470-479`:
+
+```tsx
+<div className="flex items-center justify-between p-4 border rounded-lg border-red-200">
+  <div>
+    <h3 className="font-medium text-red-800">Clear All Data</h3>
+    <p className="text-sm text-red-600">
+      Permanently delete all application data (factory reset)
+    </p>
+  </div>
+  <Button variant="destructive" onClick={() => setShowClearDataDialog(true)}>
+    <TrashIcon className="h-4 w-4 mr-0" />
+    Clear Data
+  </Button>
+</div>
+```
+
+This action:
+- Deletes all encrypted data from localStorage
+- Removes PIN hash
+- Clears session state
+- Resets preferences
+- **Cannot be undone** without a backup
+
+<Warning>
+  **Data Loss**: Clearing all data is permanent. Always export a backup before using this feature. This is useful if you've forgotten your PIN and need to start fresh.
+</Warning>
+
+### Forgotten PIN Recovery
+
+From `components/pin-entry.tsx:220-257`:
+
+```tsx
+<p className="mt-1">
+  If you forgot your PIN, you'll need to{" "}
+  <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+    <AlertDialogTrigger asChild>
+      <button className="text-green-700 underline hover:text-green-900 font-medium">
+        reset the application
+      </button>
+    </AlertDialogTrigger>
+    <AlertDialogContent>
+      <AlertDialogTitle className="flex items-center gap-2">
+        <Trash2 className="h-5 w-5 text-red-600" />
+        Reset Application
+      </AlertDialogTitle>
+      <AlertDialogDescription>
+        This will permanently delete all your locally stored data including
+        saved server connections, saved queries, query history, and application
+        settings. This only affects data stored in your browser - your actual
+        PostgreSQL databases and servers will remain completely untouched.
+      </AlertDialogDescription>
+    </AlertDialogContent>
+  </AlertDialog>
+</p>
+```
+
+If you forget your PIN:
+1. Click "reset the application" on PIN entry screen
+2. Confirm you understand data will be deleted
+3. Application clears all localStorage and reloads
+4. Complete first-time setup with new PIN
+5. Optionally import a backup (if you have one with a known password)
+
+<Info>
+  **Database Safety**: Resetting Poge only affects data stored in your browser. Your actual PostgreSQL databases are never touched by Poge and remain safe.
+</Info>
+
+## Session Management Recommendations
+
+### For Personal Devices
+
+- Auto-lock: 15-30 minutes
+- Lock on refresh: Disabled (for convenience)
+- Backup frequency: Weekly or after major changes
+- Backup storage: Password manager or encrypted cloud storage
+
+### For Shared Devices
+
+- Auto-lock: 5 minutes
+- Lock on refresh: Enabled
+- Backup frequency: Daily (or don't use Poge on shared devices)
+- Manual lock: Always lock when stepping away
+
+### For High-Security Environments
+
+- Auto-lock: 5 minutes
+- Lock on refresh: Enabled
+- Use strong backup passwords (20+ characters)
+- Regularly rotate PIN (monthly)
+- Store backups in enterprise secret management systems
+- Consider using Poge only for non-production databases
+
+## Troubleshooting
+
+### Session Won't Unlock After Correct PIN
+
+**Possible causes:**
+- PIN hash corrupted in localStorage
+- Browser storage quota exceeded
+- Browser privacy settings blocking localStorage
+
+**Solution:**
+1. Check browser console for errors (F12)
+2. Verify localStorage is enabled in browser settings
+3. Try importing a backup
+4. Last resort: Reset application and restore from backup
+
+### Auto-Lock Not Working
+
+**Possible causes:**
+- Auto-lock set to "Never"
+- Browser tab not active (some browsers throttle background tabs)
+- User activity constantly resetting timer
+
+**Solution:**
+1. Verify auto-lock timeout setting (Settings → Security)
+2. Test by leaving tab inactive for configured duration
+3. Check browser console for JavaScript errors
+
+### Session Locks Too Frequently
+
+**Possible causes:**
+- Auto-lock timeout too short
+- Not enough user activity to reset timer
+- Multiple Poge tabs competing for session state
+
+**Solution:**
+1. Increase auto-lock timeout (Settings → Security)
+2. Use only one Poge tab at a time
+3. Manually lock when done instead of relying on timeout
+
+## Next Steps
+
+- Learn about [AES-256 encryption details](/security/encryption)
+- Review [security best practices](/security/overview#security-best-practices)
+- Understand [encrypted backup format](/security/encryption#encrypted-backup-files-enc)

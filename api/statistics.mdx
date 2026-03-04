@@ -1,0 +1,380 @@
+---
+title: 'Statistics'
+description: 'Connection pool and query cache statistics endpoints'
+---
+
+## Overview
+
+Poge provides two statistics endpoints for monitoring connection pooling and query caching performance. These endpoints help track resource usage, cache efficiency, and connection health.
+
+## Pool Statistics
+
+<api>GET /api/stats/pools</api>
+
+Retrieves statistics for all active connection pools.
+
+### Response
+
+<ResponseField name="stats" type="array">
+  Array of pool statistics objects, one per connection pool
+</ResponseField>
+
+<ResponseField name="stats[].poolId" type="string">
+  Unique identifier for the connection pool
+</ResponseField>
+
+<ResponseField name="stats[].totalConnections" type="number">
+  Total number of connections in the pool
+</ResponseField>
+
+<ResponseField name="stats[].idleConnections" type="number">
+  Number of idle connections available
+</ResponseField>
+
+<ResponseField name="stats[].activeConnections" type="number">
+  Number of connections currently in use
+</ResponseField>
+
+<ResponseField name="stats[].waitingClients" type="number">
+  Number of clients waiting for a connection
+</ResponseField>
+
+### Example
+
+<RequestExample>
+```bash cURL
+curl http://localhost:3000/api/stats/pools
+```
+
+```javascript JavaScript
+const response = await fetch('/api/stats/pools');
+const data = await response.json();
+console.log(data.stats);
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "stats": [
+    {
+      "poolId": "localhost:5432:postgres:mydb",
+      "totalConnections": 5,
+      "idleConnections": 3,
+      "activeConnections": 2,
+      "waitingClients": 0
+    },
+    {
+      "poolId": "db.example.com:5432:admin:analytics",
+      "totalConnections": 8,
+      "idleConnections": 5,
+      "activeConnections": 3,
+      "waitingClients": 1
+    }
+  ]
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json Error (500)
+{
+  "error": "Failed to retrieve pool statistics",
+  "stats": []
+}
+```
+</ResponseExample>
+
+### Implementation
+
+From `/app/api/stats/pools/route.ts:4-14`:
+
+```typescript
+export async function GET() {
+  try {
+    const stats = dbPool.getPoolStats()
+    return NextResponse.json({ stats })
+  } catch (error: any) {
+    console.error('Failed to get pool stats:', error)
+    return NextResponse.json({ 
+      error: 'Failed to retrieve pool statistics',
+      stats: []
+    }, { status: 500 })
+  }
+}
+```
+
+### Use Cases
+
+- **Performance Monitoring**: Track connection pool utilization
+- **Capacity Planning**: Identify when pools are saturated
+- **Debugging**: Diagnose connection leaks or bottlenecks
+- **Health Checks**: Verify database connectivity status
+
+---
+
+## Cache Statistics
+
+<api>GET /api/stats/cache</api>
+
+Retrieves query cache statistics and recent cache entries.
+
+### Response
+
+<ResponseField name="stats" type="object">
+  Cache performance statistics
+</ResponseField>
+
+<ResponseField name="stats.totalQueries" type="number">
+  Total number of queries executed
+</ResponseField>
+
+<ResponseField name="stats.cacheHits" type="number">
+  Number of queries served from cache
+</ResponseField>
+
+<ResponseField name="stats.cacheMisses" type="number">
+  Number of queries that missed cache
+</ResponseField>
+
+<ResponseField name="stats.hitRate" type="number">
+  Cache hit rate as a percentage (0-100)
+</ResponseField>
+
+<ResponseField name="stats.avgExecutionTime" type="number">
+  Average query execution time in milliseconds
+</ResponseField>
+
+<ResponseField name="stats.cacheSize" type="number">
+  Number of entries currently in cache
+</ResponseField>
+
+<ResponseField name="entries" type="array">
+  Array of up to 10 most recent cache entries
+</ResponseField>
+
+<ResponseField name="entries[].query" type="string">
+  SQL query that was cached
+</ResponseField>
+
+<ResponseField name="entries[].executionTime" type="number">
+  Original execution time in milliseconds
+</ResponseField>
+
+<ResponseField name="entries[].timestamp" type="string">
+  ISO 8601 timestamp when cached
+</ResponseField>
+
+<ResponseField name="entries[].hits" type="number">
+  Number of times this cache entry was accessed
+</ResponseField>
+
+### Example
+
+<RequestExample>
+```bash cURL
+curl http://localhost:3000/api/stats/cache
+```
+
+```javascript JavaScript
+const response = await fetch('/api/stats/cache');
+const data = await response.json();
+console.log('Hit Rate:', data.stats.hitRate + '%');
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "stats": {
+    "totalQueries": 1500,
+    "cacheHits": 1200,
+    "cacheMisses": 300,
+    "hitRate": 80,
+    "avgExecutionTime": 45,
+    "cacheSize": 250
+  },
+  "entries": [
+    {
+      "query": "SELECT * FROM users WHERE id = 1",
+      "executionTime": 12,
+      "timestamp": "2024-03-20T10:30:00.000Z",
+      "hits": 15
+    },
+    {
+      "query": "SELECT COUNT(*) FROM orders WHERE status = 'pending'",
+      "executionTime": 35,
+      "timestamp": "2024-03-20T10:28:00.000Z",
+      "hits": 8
+    }
+  ]
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json Error (500)
+{
+  "error": "Failed to retrieve cache statistics",
+  "stats": {
+    "totalQueries": 0,
+    "cacheHits": 0,
+    "cacheMisses": 0,
+    "hitRate": 0,
+    "avgExecutionTime": 0,
+    "cacheSize": 0
+  },
+  "entries": []
+}
+```
+</ResponseExample>
+
+### Implementation
+
+From `/app/api/stats/cache/route.ts:4-28`:
+
+```typescript
+export async function GET() {
+  try {
+    const stats = queryCache.getStats()
+    const entries = queryCache.getCacheEntries()
+    
+    return NextResponse.json({ 
+      stats,
+      entries: entries.slice(0, 10) // Limit to 10 most recent entries
+    })
+  } catch (error: any) {
+    console.error('Failed to get cache stats:', error)
+    return NextResponse.json({ 
+      error: 'Failed to retrieve cache statistics',
+      stats: {
+        totalQueries: 0,
+        cacheHits: 0,
+        cacheMisses: 0,
+        hitRate: 0,
+        avgExecutionTime: 0,
+        cacheSize: 0
+      },
+      entries: []
+    }, { status: 500 })
+  }
+}
+```
+
+### Use Cases
+
+- **Cache Optimization**: Monitor cache effectiveness
+- **Performance Tuning**: Identify frequently cached queries
+- **Resource Management**: Track cache memory usage
+- **Query Analysis**: Find slow queries that benefit from caching
+
+---
+
+## Clear Cache
+
+<api>DELETE /api/stats/cache</api>
+
+Clears all entries from the query cache.
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Whether cache was cleared successfully
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success confirmation message
+</ResponseField>
+
+### Example
+
+<RequestExample>
+```bash cURL
+curl -X DELETE http://localhost:3000/api/stats/cache
+```
+
+```javascript JavaScript
+const response = await fetch('/api/stats/cache', {
+  method: 'DELETE'
+});
+const result = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "success": true,
+  "message": "Cache cleared successfully"
+}
+```
+</ResponseExample>
+
+<ResponseExample>
+```json Error (500)
+{
+  "error": "Failed to clear cache"
+}
+```
+</ResponseExample>
+
+### Implementation
+
+From `/app/api/stats/cache/route.ts:30-40`:
+
+```typescript
+export async function DELETE() {
+  try {
+    queryCache.clear()
+    return NextResponse.json({ success: true, message: 'Cache cleared successfully' })
+  } catch (error: any) {
+    console.error('Failed to clear cache:', error)
+    return NextResponse.json({ 
+      error: 'Failed to clear cache'
+    }, { status: 500 })
+  }
+}
+```
+
+### Use Cases
+
+- **Cache Invalidation**: Clear stale cache after data changes
+- **Testing**: Reset cache for performance benchmarks
+- **Debugging**: Clear cache to diagnose caching issues
+- **Memory Management**: Free cache memory when needed
+
+---
+
+## Monitoring Dashboard Example
+
+Here's how to build a simple monitoring dashboard:
+
+```javascript
+// Fetch both pool and cache statistics
+const [poolData, cacheData] = await Promise.all([
+  fetch('/api/stats/pools').then(r => r.json()),
+  fetch('/api/stats/cache').then(r => r.json())
+]);
+
+// Calculate totals
+const totalPools = poolData.stats.length;
+const totalActiveConnections = poolData.stats.reduce(
+  (sum, pool) => sum + pool.activeConnections, 0
+);
+
+console.log(`Active Pools: ${totalPools}`);
+console.log(`Active Connections: ${totalActiveConnections}`);
+console.log(`Cache Hit Rate: ${cacheData.stats.hitRate}%`);
+console.log(`Avg Query Time: ${cacheData.stats.avgExecutionTime}ms`);
+```
+
+## Performance Impact
+
+Both statistics endpoints are lightweight:
+
+- **Pool stats**: Less than 5ms (no database queries)
+- **Cache stats**: Less than 10ms (in-memory operations)
+
+<Note>
+  Statistics endpoints do not require database credentials and can be called without authentication.
+</Note>

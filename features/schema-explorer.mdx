@@ -1,0 +1,207 @@
+---
+title: Schema explorer
+description: Navigate your database structure with an interactive tree view of databases, schemas, tables, and views
+---
+
+The schema explorer provides a hierarchical view of your PostgreSQL database structure, making it easy to navigate between servers, databases, schemas, and tables.
+
+## Database tree
+
+The tree view (`components/database-tree.tsx` and `components/schema-tree.tsx`) organizes your database objects hierarchically:
+
+```
+└── Server Name
+    └── Database Name
+        └── Schema (public, custom schemas)
+            ├── Tables
+            │   └── table_name
+            └── Views
+                └── view_name
+```
+
+## Expanding nodes
+
+Click any node to expand or collapse it:
+
+- **Server nodes**: Show all databases on that server
+- **Database nodes**: Show all schemas in that database
+- **Schema nodes**: Show tables and views
+- **Table/View nodes**: Open in the table viewer
+
+<Info>
+The schema tree uses lazy loading to fetch data only when you expand a node, keeping the initial load fast.
+</Info>
+
+## Object types
+
+The explorer displays different icons for each object type:
+
+| Icon | Type | Description |
+|------|------|-------------|
+| 🗄️ | Server | PostgreSQL server connection |
+| 💾 | Database | Individual database |
+| 📁 | Schema | Schema (namespace) |
+| 📊 | Table | Data table |
+| 👁️ | View | Database view |
+| 🔍 | Materialized View | Materialized view |
+
+## Table information
+
+Hover over any table or view to see quick information:
+
+- **Row count**: Approximate number of rows
+- **Size**: Disk space used
+- **Columns**: Number of columns
+- **Created**: Creation timestamp
+
+## Context menu
+
+Right-click any object to access context menu options:
+
+### Table operations
+
+- **Open in Table Viewer**: View table data
+- **Open in Query Tool**: Generate SELECT query
+- **View Schema**: Show table structure
+- **Edit Table**: Modify columns and constraints
+- **Export Data**: Export table contents
+- **Drop Table**: Delete the table
+
+### Database operations
+
+- **Refresh**: Reload the schema tree
+- **Create Schema**: Add a new schema
+- **Create Table**: Open table designer
+- **Create View**: Open view creator
+
+## Creating objects
+
+### Create schema
+
+1. Right-click a database node
+2. Select **Create Schema**
+3. Enter schema name and optional owner
+4. Click **Create**
+
+### Create table
+
+1. Right-click a schema node
+2. Select **Create Table**
+3. Use the table designer to define:
+   - Table name
+   - Columns (name, type, constraints)
+   - Primary key
+   - Indexes
+   - Foreign keys
+4. Click **Create Table**
+
+See the table designer documentation for details on column types and constraints.
+
+### Create view
+
+1. Right-click a schema node
+2. Select **Create View**
+3. Enter view name and SQL query:
+
+```sql
+CREATE VIEW active_users AS
+SELECT id, name, email, created_at
+FROM users
+WHERE status = 'active';
+```
+
+4. Click **Create View**
+
+## Refreshing the tree
+
+Refresh the schema tree to see recent changes:
+
+- **Refresh all**: Click the refresh button in the toolbar
+- **Refresh node**: Right-click a node and select **Refresh**
+
+<Note>
+The schema tree is cached for performance. Refresh after making schema changes outside Poge.
+</Note>
+
+## Filtering objects
+
+Use the search box to filter visible objects:
+
+1. Type in the search box at the top of the explorer
+2. Only matching tables, views, and schemas are shown
+3. Clear the search to show all objects
+
+Search is case-insensitive and matches partial names.
+
+## Schema comparison
+
+Compare schemas between databases or servers:
+
+1. Click **Compare Schemas** in the toolbar
+2. Select source and target databases
+3. View differences:
+   - Tables present in source but not target
+   - Tables with different columns
+   - Missing indexes
+   - Different constraints
+4. Generate migration SQL to sync schemas
+
+The comparison tool (`components/schema-comparison.tsx`) helps identify schema drift.
+
+## System catalogs
+
+View PostgreSQL system catalogs:
+
+- **pg_catalog**: System tables and views
+- **information_schema**: SQL standard metadata views
+
+<Info>
+System schemas are hidden by default. Enable them in Settings → Display → Show system schemas.
+</Info>
+
+## Performance
+
+The schema explorer uses several optimizations:
+
+### Lazy loading
+
+Nodes are loaded only when expanded, reducing initial load time and memory usage.
+
+### Caching
+
+Schema metadata is cached (`lib/query-cache.ts`) for 5 minutes:
+
+- Subsequent expansions are instant
+- Cache invalidated on schema changes
+- Manual refresh available
+
+### Efficient queries
+
+Metadata queries use PostgreSQL's system catalogs:
+
+```sql
+SELECT 
+  schemaname, 
+  tablename, 
+  tableowner
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY schemaname, tablename;
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Table viewer" icon="table" href="/features/table-viewer">
+    View and edit data in your tables
+  </Card>
+  <Card title="Query tool" icon="terminal" href="/features/query-tool">
+    Run SQL queries against your database
+  </Card>
+  <Card title="Schema operations API" icon="code" href="/api/schema-operations">
+    Access schema metadata programmatically
+  </Card>
+  <Card title="Database objects types" icon="shapes" href="/api/types/database-objects">
+    TypeScript interfaces for database objects
+  </Card>
+</CardGroup>

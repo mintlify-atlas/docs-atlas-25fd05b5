@@ -1,0 +1,228 @@
+---
+title: 'Test Connection'
+description: 'Verify PostgreSQL database credentials and connectivity'
+api: 'POST /api/test-connection'
+---
+
+## Overview
+
+Tests database connectivity with provided credentials. This endpoint validates that Poge can establish a connection to the PostgreSQL server and execute queries.
+
+## Request
+
+<ParamField body="host" type="string" required>
+  PostgreSQL server hostname or IP address
+  
+  Example: `localhost`, `db.example.com`, `192.168.1.100`
+</ParamField>
+
+<ParamField body="port" type="number" required>
+  PostgreSQL server port number
+  
+  Default: `5432`
+</ParamField>
+
+<ParamField body="user" type="string" required>
+  PostgreSQL username for authentication
+</ParamField>
+
+<ParamField body="password" type="string">
+  PostgreSQL user password
+  
+  Optional for users without password authentication
+</ParamField>
+
+<ParamField body="database" type="string">
+  Target database name
+  
+  Defaults to `postgres` if not specified
+</ParamField>
+
+<ParamField body="sslMode" type="string">
+  SSL connection mode
+  
+  Options: `disable`, `require`, `prefer`
+  
+  Default: `disable`
+</ParamField>
+
+## Response
+
+### Success Response
+
+<ResponseField name="success" type="boolean">
+  Connection status (true for successful connections)
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable success message
+</ResponseField>
+
+### Error Response
+
+<ResponseField name="success" type="boolean">
+  Always `false` for errors
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message describing the failure
+</ResponseField>
+
+<ResponseField name="details" type="string">
+  Additional context about the error and resolution steps
+</ResponseField>
+
+<ResponseField name="code" type="string">
+  PostgreSQL or system error code
+</ResponseField>
+
+## Examples
+
+### Successful Connection
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/test-connection \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "mypassword",
+    "database": "mydb",
+    "sslMode": "disable"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/test-connection', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    host: 'localhost',
+    port: 5432,
+    user: 'postgres',
+    password: 'mypassword',
+    database: 'mydb',
+    sslMode: 'disable'
+  })
+});
+
+const result = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "success": true,
+  "message": "Connection successful!"
+}
+```
+</ResponseExample>
+
+### Connection Refused
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/test-connection \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5433,
+    "user": "postgres",
+    "password": "mypassword"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Error (500)
+{
+  "success": false,
+  "error": "Connection refused",
+  "details": "Unable to connect to the database server. Please check if the server is running and the host/port are correct.",
+  "code": "ECONNREFUSED"
+}
+```
+</ResponseExample>
+
+### Authentication Failed
+
+<ResponseExample>
+```json Error (500)
+{
+  "success": false,
+  "error": "Authentication failed",
+  "details": "Invalid username or password.",
+  "code": "28P01"
+}
+```
+</ResponseExample>
+
+### Database Not Found
+
+<ResponseExample>
+```json Error (500)
+{
+  "success": false,
+  "error": "Database does not exist",
+  "details": "The specified database does not exist on the server. Try connecting without specifying a database or use a different database name.",
+  "code": "3D000"
+}
+```
+</ResponseExample>
+
+### Missing Required Fields
+
+<ResponseExample>
+```json Error (400)
+{
+  "success": false,
+  "error": "Missing required fields: host, port, and user are required"
+}
+```
+</ResponseExample>
+
+## Error Codes
+
+The endpoint returns specific error codes from PostgreSQL and the system:
+
+| Code | Error | Description |
+|------|-------|-------------|
+| `ECONNREFUSED` | Connection refused | Server is not running or port is incorrect |
+| `ENOTFOUND` | Host not found | Invalid hostname or DNS resolution failed |
+| `ECONNRESET` | Connection reset | SSL configuration mismatch |
+| `28P01` | Authentication failed | Invalid username or password |
+| `3D000` | Database does not exist | Specified database not found |
+| `28000` | Invalid authorization | User lacks database access permissions |
+
+## Implementation Details
+
+From `/app/api/test-connection/route.ts:15-30`:
+
+```typescript
+const client = new Client({
+  host,
+  port,
+  user,
+  password,
+  database: database || 'postgres', // Use postgres as default
+  ssl: sslMode === "require" ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 5000, // 5 second timeout
+})
+
+await client.connect()
+await client.query('SELECT 1') // Validate connection
+await client.end()
+```
+
+<Note>
+  The endpoint creates a new client connection (not pooled) to test credentials without affecting the connection pool.
+</Note>
+
+## Use Cases
+
+- **Server Setup Form**: Validate credentials before saving connection
+- **Health Checks**: Verify database availability
+- **Connection Debugging**: Identify connection issues with detailed errors

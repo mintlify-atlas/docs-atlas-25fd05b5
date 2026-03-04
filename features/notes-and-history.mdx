@@ -1,0 +1,291 @@
+---
+title: Notes and history
+description: Keep track of your queries, save notes, and access your query history across sessions
+---
+
+Poge automatically tracks your query history and provides a notes system for documenting your work. Both features use local storage and are included in encrypted backups.
+
+## Query history
+
+Every SQL query you execute is automatically saved to your history (`hooks/use-query-history.ts`). Access it from the **History** button in the Query Tool toolbar.
+
+### What's stored
+
+Each history entry includes:
+
+- **Query text**: The complete SQL statement
+- **Timestamp**: When the query was executed
+- **Server and database**: Where it ran
+- **Execution time**: Duration in milliseconds
+- **Row count**: Number of rows affected or returned
+- **Status**: Success or error
+- **Error details**: If the query failed
+
+### Viewing history
+
+The query history dialog (`components/query-history-dialog.tsx`) shows:
+
+- Most recent queries first
+- Color-coded status (green for success, red for errors)
+- Expandable query text for long queries
+- Hover to see full details
+
+### Using history
+
+Click any query in your history to:
+
+1. Load it into the current editor
+2. Modify as needed
+3. Re-execute
+
+<Info>
+Query history is shared across all query tabs, making it easy to reuse queries anywhere.
+</Info>
+
+### History limits
+
+By default, Poge stores:
+
+- **Last 100 queries** per server/database combination
+- Older queries are automatically removed
+- Total history size limited to 5MB
+
+Change these limits in **Settings** → **Query History**.
+
+### Clearing history
+
+Clear your query history:
+
+1. Open **Settings** → **Data Management**
+2. Click **Clear Query History**
+3. Confirm the action
+
+<Warning>
+Clearing history is permanent and cannot be undone. Consider exporting a backup first.
+</Warning>
+
+## Saved queries
+
+Save frequently used queries for quick access (`hooks/use-saved-queries.ts`).
+
+### Saving a query
+
+1. Write or load your query in the editor
+2. Click **Save Query** (bookmark icon)
+3. Fill in:
+   - **Name**: Descriptive name for the query
+   - **Description** (optional): What the query does
+   - **Tags** (optional): Keywords for organization
+4. Click **Save**
+
+### Loading saved queries
+
+Access saved queries from the **Load Query** dialog:
+
+1. Click **Load Query** button
+2. Browse or search your saved queries
+3. Click a query to load it
+
+Saved queries are organized by:
+
+- **Server**: Which PostgreSQL server
+- **Database**: Which database
+- **Tags**: Custom categories
+
+### Editing saved queries
+
+Modify a saved query:
+
+1. Load the query in the editor
+2. Make your changes
+3. Click **Save Query** again
+4. Use the same name to overwrite, or a new name to create a copy
+
+### Deleting saved queries
+
+1. Open the **Load Query** dialog
+2. Hover over the query card
+3. Click the **Delete** button (trash icon)
+4. Confirm deletion
+
+## Query templates
+
+Poge includes built-in query templates for common operations (`components/query-templates-dialog.tsx`).
+
+### Available templates
+
+#### Table inspection
+
+```sql
+-- View first 10 rows
+SELECT * FROM table_name LIMIT 10;
+
+-- Table structure
+SELECT 
+  column_name, 
+  data_type, 
+  character_maximum_length, 
+  is_nullable
+FROM information_schema.columns
+WHERE table_name = 'table_name';
+```
+
+#### Performance analysis
+
+```sql
+-- Active connections
+SELECT 
+  pid, 
+  usename, 
+  application_name, 
+  state, 
+  query
+FROM pg_stat_activity
+WHERE state != 'idle';
+
+-- Table sizes
+SELECT 
+  schemaname, 
+  tablename, 
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+LIMIT 20;
+```
+
+#### Index analysis
+
+```sql
+-- All indexes on a table
+SELECT 
+  indexname, 
+  indexdef
+FROM pg_indexes
+WHERE tablename = 'table_name';
+
+-- Unused indexes
+SELECT 
+  schemaname, 
+  tablename, 
+  indexname, 
+  idx_scan
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+ORDER BY schemaname, tablename;
+```
+
+### Using templates
+
+1. Click **Templates** in the toolbar
+2. Browse template categories
+3. Click a template to load it
+4. Customize placeholders (like `table_name`)
+5. Execute the query
+
+## Notes and scratch pad
+
+The scratch pad (`components/scratch-pad.tsx` and `components/notes.tsx`) provides a space for:
+
+- Quick notes and reminders
+- Documentation of database structure
+- Query planning and brainstorming
+- Paste temporary data
+
+### Creating notes
+
+1. Click **Notes** in the sidebar
+2. Click **New Note**
+3. Give your note a title
+4. Write content using Markdown
+5. Notes auto-save as you type
+
+### Organizing notes
+
+Notes support:
+
+- **Folders**: Organize notes by project or topic
+- **Tags**: Add keywords for easy searching
+- **Favorites**: Star important notes
+- **Search**: Full-text search across all notes
+
+### Markdown support
+
+Notes use Markdown formatting:
+
+```markdown
+# Database Schema Notes
+
+## Users Table
+- Primary key: `id` (SERIAL)
+- Unique: `email`
+- Indexes: `email`, `created_at`
+
+## TODO
+- [ ] Add index on user_id in orders table
+- [ ] Create view for active users
+- [x] Update password hashing
+```
+
+### Sharing notes
+
+Export notes to share with your team:
+
+1. Open the note
+2. Click **Export** → **Markdown**
+3. Share the .md file
+
+Team members can import notes by dragging the .md file into Poge.
+
+## Storage and backup
+
+All history, saved queries, and notes are stored locally:
+
+- **Location**: Browser localStorage
+- **Encryption**: Included in encrypted backups (.enc files)
+- **Size**: Limited by browser (typically 5-10 MB)
+- **Persistence**: Survives browser restarts
+
+### Creating backups
+
+1. Go to **Settings** → **Backup & Restore**
+2. Click **Create Backup**
+3. Choose:
+   - **Full backup**: Everything including connection details (encrypted)
+   - **Data only**: History, queries, notes (encrypted)
+   - **Settings only**: No sensitive data (plain JSON)
+4. Save the backup file
+
+<Info>
+Create backups regularly, especially before major database operations or when sharing your computer.
+</Info>
+
+### Restoring from backup
+
+1. Go to **Settings** → **Backup & Restore**
+2. Click **Restore from Backup**
+3. Select your .enc backup file
+4. Enter the encryption password
+5. Choose what to restore:
+   - Connection servers
+   - Saved queries
+   - Query history
+   - Notes
+   - Settings
+6. Click **Restore**
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Query tool" icon="terminal" href="/features/query-tool">
+    Learn more about writing and executing queries
+  </Card>
+  <Card title="Backup and restore" icon="shield" href="/self-hosting/backup-restore">
+    Complete guide to backing up your data
+  </Card>
+  <Card title="Keyboard shortcuts" icon="keyboard" href="/resources/keyboard-shortcuts">
+    Speed up your workflow with shortcuts
+  </Card>
+  <Card title="Settings" icon="gear" href="/self-hosting/configuration">
+    Configure history limits and auto-save behavior
+  </Card>
+</CardGroup>

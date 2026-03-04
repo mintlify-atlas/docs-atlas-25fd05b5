@@ -1,0 +1,297 @@
+---
+title: 'Server Connection Types'
+description: 'TypeScript interfaces for PostgreSQL server connections'
+---
+
+## Overview
+
+Poge uses two primary interfaces for managing PostgreSQL server connections: `ServerConnection` for stored connections with metadata, and `ServerFormData` for connection form input.
+
+## ServerConnection
+
+Represents a saved PostgreSQL server connection with full metadata.
+
+### Interface Definition
+
+From `/types/server.ts:1-14`:
+
+```typescript
+export interface ServerConnection {
+  id: string
+  name: string
+  host: string
+  port: number
+  database: string
+  username: string
+  password: string
+  sslMode?: "disable" | "require" | "prefer"
+  connected: boolean
+  favorite?: boolean
+  createdAt: Date
+  lastConnected?: Date
+}
+```
+
+### Fields
+
+<ParamField path="id" type="string" required>
+  Unique identifier for the connection (UUID)
+  
+  Example: `"550e8400-e29b-41d4-a716-446655440000"`
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Human-readable connection name
+  
+  Example: `"Production Database"`, `"Local Dev"`
+</ParamField>
+
+<ParamField path="host" type="string" required>
+  PostgreSQL server hostname or IP address
+  
+  Example: `"localhost"`, `"db.example.com"`
+</ParamField>
+
+<ParamField path="port" type="number" required>
+  PostgreSQL server port number
+  
+  Default: `5432`
+</ParamField>
+
+<ParamField path="database" type="string" required>
+  Target database name
+  
+  Example: `"myapp_production"`
+</ParamField>
+
+<ParamField path="username" type="string" required>
+  PostgreSQL username for authentication
+  
+  Example: `"postgres"`, `"app_user"`
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  PostgreSQL user password
+  
+  <Warning>Stored in plain text. Use secure storage mechanisms in production.</Warning>
+</ParamField>
+
+<ParamField path="sslMode" type="string">
+  SSL connection mode
+  
+  Options:
+  - `"disable"` - No SSL
+  - `"require"` - Require SSL (allows self-signed certificates)
+  - `"prefer"` - Try SSL first, fallback to non-SSL
+  
+  Default: `"disable"`
+</ParamField>
+
+<ParamField path="connected" type="boolean" required>
+  Current connection status
+  
+  - `true` - Connection is active/established
+  - `false` - Connection is inactive
+</ParamField>
+
+<ParamField path="favorite" type="boolean">
+  Whether connection is marked as favorite
+  
+  Used for sorting/filtering in UI
+</ParamField>
+
+<ParamField path="createdAt" type="Date" required>
+  Timestamp when connection was created
+  
+  Example: `new Date("2024-01-15T10:30:00Z")`
+</ParamField>
+
+<ParamField path="lastConnected" type="Date">
+  Timestamp of last successful connection
+  
+  `undefined` if never connected
+</ParamField>
+
+### Example
+
+```typescript
+const connection: ServerConnection = {
+  id: "550e8400-e29b-41d4-a716-446655440000",
+  name: "Production Database",
+  host: "db.example.com",
+  port: 5432,
+  database: "myapp_production",
+  username: "postgres",
+  password: "secure_password",
+  sslMode: "require",
+  connected: true,
+  favorite: true,
+  createdAt: new Date("2024-01-15T10:30:00Z"),
+  lastConnected: new Date("2024-03-20T14:25:00Z")
+}
+```
+
+### Use Cases
+
+- **Connection List**: Display saved connections in sidebar
+- **Connection Switching**: Switch between multiple databases
+- **Recent Connections**: Sort by `lastConnected` for quick access
+- **Favorites**: Filter favorite connections for quick access
+
+---
+
+## ServerFormData
+
+Represents form input data for creating or editing server connections.
+
+### Interface Definition
+
+From `/types/server.ts:16-25`:
+
+```typescript
+export interface ServerFormData {
+  name: string
+  host: string
+  port: number
+  database: string
+  username: string
+  password: string
+  sslMode?: "disable" | "require" | "prefer"
+  connectionString?: string
+}
+```
+
+### Fields
+
+<ParamField path="name" type="string" required>
+  Human-readable connection name
+</ParamField>
+
+<ParamField path="host" type="string" required>
+  PostgreSQL server hostname or IP address
+</ParamField>
+
+<ParamField path="port" type="number" required>
+  PostgreSQL server port number
+</ParamField>
+
+<ParamField path="database" type="string" required>
+  Target database name
+</ParamField>
+
+<ParamField path="username" type="string" required>
+  PostgreSQL username for authentication
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  PostgreSQL user password
+</ParamField>
+
+<ParamField path="sslMode" type="string">
+  SSL connection mode (`"disable"`, `"require"`, `"prefer"`)
+</ParamField>
+
+<ParamField path="connectionString" type="string">
+  PostgreSQL connection string (alternative to individual fields)
+  
+  Format: `postgresql://username:password@host:port/database?sslmode=require`
+  
+  When provided, parsed into individual fields
+</ParamField>
+
+### Example
+
+```typescript
+const formData: ServerFormData = {
+  name: "Local Development",
+  host: "localhost",
+  port: 5432,
+  database: "myapp_dev",
+  username: "postgres",
+  password: "devpassword",
+  sslMode: "disable"
+}
+```
+
+### Connection String Example
+
+```typescript
+const formDataWithConnectionString: ServerFormData = {
+  name: "Production via Connection String",
+  connectionString: "postgresql://postgres:securepass@db.example.com:5432/myapp_production?sslmode=require",
+  host: "", // Parsed from connectionString
+  port: 0,  // Parsed from connectionString
+  database: "",
+  username: "",
+  password: ""
+}
+```
+
+### Use Cases
+
+- **Connection Form**: Capture user input for new connections
+- **Connection Editing**: Update existing connection properties
+- **Connection String Import**: Parse PostgreSQL connection strings
+- **Form Validation**: Validate required fields before saving
+
+---
+
+## Type Conversion
+
+Convert `ServerFormData` to `ServerConnection`:
+
+```typescript
+import { v4 as uuidv4 } from 'uuid';
+
+function formDataToConnection(formData: ServerFormData): ServerConnection {
+  return {
+    id: uuidv4(),
+    name: formData.name,
+    host: formData.host,
+    port: formData.port,
+    database: formData.database,
+    username: formData.username,
+    password: formData.password,
+    sslMode: formData.sslMode || "disable",
+    connected: false,
+    favorite: false,
+    createdAt: new Date(),
+    lastConnected: undefined
+  };
+}
+```
+
+## Validation Example
+
+```typescript
+function validateServerFormData(data: ServerFormData): string[] {
+  const errors: string[] = [];
+  
+  if (!data.name?.trim()) errors.push("Name is required");
+  if (!data.host?.trim()) errors.push("Host is required");
+  if (!data.port || data.port < 1 || data.port > 65535) {
+    errors.push("Port must be between 1 and 65535");
+  }
+  if (!data.database?.trim()) errors.push("Database is required");
+  if (!data.username?.trim()) errors.push("Username is required");
+  
+  return errors;
+}
+```
+
+## Security Considerations
+
+<Warning>
+  **Password Storage**: Both interfaces store passwords in plain text. For production use:
+  
+  - Encrypt passwords before storage
+  - Use environment variables or secure vaults
+  - Consider OAuth or certificate-based authentication
+  - Never commit passwords to version control
+</Warning>
+
+## Related Types
+
+See also:
+- [Database Objects](/api/types/database-objects) - Schema and table types
+- [Query Results](/api/types/query-results) - Query execution types

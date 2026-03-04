@@ -1,0 +1,539 @@
+---
+title: 'Query Result Types'
+description: 'TypeScript interfaces for query execution, results, and saved queries'
+---
+
+## Overview
+
+Poge provides TypeScript interfaces for managing SQL queries, execution results, and query history. These types support single and multi-statement queries, caching, and query templates.
+
+## Query Management Types
+
+### QueryTab
+
+Represents a query editor tab.
+
+From `/types/query.ts:1-9`:
+
+```typescript
+export interface QueryTab {
+  id: string
+  name: string
+  content: string
+  isModified: boolean
+  locked: boolean
+  serverId?: string
+  database?: string
+}
+```
+
+<ParamField path="id" type="string" required>
+  Unique tab identifier
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Tab display name (e.g., `"Query 1"`, `"Users Report"`)
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  SQL query content in the editor
+</ParamField>
+
+<ParamField path="isModified" type="boolean" required>
+  Whether tab has unsaved changes
+</ParamField>
+
+<ParamField path="locked" type="boolean" required>
+  Whether tab is locked from editing
+</ParamField>
+
+<ParamField path="serverId" type="string">
+  Associated server connection ID
+</ParamField>
+
+<ParamField path="database" type="string">
+  Target database for this tab
+</ParamField>
+
+**Example:**
+```typescript
+const tab: QueryTab = {
+  id: "tab-1",
+  name: "User Analysis",
+  content: "SELECT * FROM users WHERE active = true;",
+  isModified: true,
+  locked: false,
+  serverId: "conn-123",
+  database: "myapp_production"
+}
+```
+
+---
+
+### SavedQuery
+
+Represents a saved query for reuse.
+
+From `/types/query.ts:11-18`:
+
+```typescript
+export interface SavedQuery {
+  id: string
+  name: string
+  content: string
+  createdAt: Date
+  lastModified: Date
+  category?: "select" | "insert" | "update" | "delete"
+}
+```
+
+<ParamField path="id" type="string" required>
+  Unique query identifier
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Query name for identification
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  SQL query content
+</ParamField>
+
+<ParamField path="createdAt" type="Date" required>
+  Query creation timestamp
+</ParamField>
+
+<ParamField path="lastModified" type="Date" required>
+  Last modification timestamp
+</ParamField>
+
+<ParamField path="category" type="string">
+  Query category: `"select"`, `"insert"`, `"update"`, `"delete"`
+</ParamField>
+
+**Example:**
+```typescript
+const savedQuery: SavedQuery = {
+  id: "query-456",
+  name: "Active Users Report",
+  content: "SELECT id, name, email FROM users WHERE active = true ORDER BY created_at DESC;",
+  createdAt: new Date("2024-01-15T10:00:00Z"),
+  lastModified: new Date("2024-02-20T14:30:00Z"),
+  category: "select"
+}
+```
+
+---
+
+## Query Execution Types
+
+### QueryResult
+
+Represents the result of a single SQL statement execution.
+
+From `/types/query.ts:20-35`:
+
+```typescript
+export interface QueryResult {
+  type: "select" | "insert" | "update" | "delete" | "error" | "success"
+  columns?: string[]
+  rows?: Record<string, any>[]
+  rowCount?: number
+  affectedRows?: number
+  executionTime: number
+  error?: string
+  query: string
+  fromCache?: boolean
+  cacheHits?: number
+  isStale?: boolean
+  cacheAge?: number
+  tableNames?: string[]
+  statement?: string
+}
+```
+
+<ParamField path="type" type="string" required>
+  Result type:
+  - `"select"` - SELECT query
+  - `"insert"` - INSERT statement
+  - `"update"` - UPDATE statement
+  - `"delete"` - DELETE statement
+  - `"error"` - Query failed
+  - `"success"` - Non-data statement succeeded (CREATE, DROP, etc.)
+</ParamField>
+
+<ParamField path="columns" type="string[]">
+  Column names for SELECT results
+</ParamField>
+
+<ParamField path="rows" type="Record<string, any>[]">
+  Result rows for SELECT queries
+</ParamField>
+
+<ParamField path="rowCount" type="number">
+  Number of rows returned (SELECT) or affected (INSERT/UPDATE/DELETE)
+</ParamField>
+
+<ParamField path="affectedRows" type="number">
+  Number of rows affected by DML statements
+</ParamField>
+
+<ParamField path="executionTime" type="number" required>
+  Query execution time in milliseconds
+</ParamField>
+
+<ParamField path="error" type="string">
+  Error message if query failed
+</ParamField>
+
+<ParamField path="query" type="string" required>
+  The SQL query that was executed
+</ParamField>
+
+<ParamField path="fromCache" type="boolean">
+  Whether result was served from cache
+</ParamField>
+
+<ParamField path="cacheHits" type="number">
+  Number of times this cached result was used
+</ParamField>
+
+<ParamField path="isStale" type="boolean">
+  Whether cached result may be outdated
+</ParamField>
+
+<ParamField path="cacheAge" type="number">
+  Age of cached result in milliseconds
+</ParamField>
+
+<ParamField path="tableNames" type="string[]">
+  Tables referenced in the query (for cache invalidation)
+</ParamField>
+
+<ParamField path="statement" type="string">
+  Normalized SQL statement
+</ParamField>
+
+**SELECT Example:**
+```typescript
+const selectResult: QueryResult = {
+  type: "select",
+  columns: ["id", "name", "email"],
+  rows: [
+    { id: 1, name: "Alice", email: "alice@example.com" },
+    { id: 2, name: "Bob", email: "bob@example.com" }
+  ],
+  rowCount: 2,
+  executionTime: 12,
+  query: "SELECT id, name, email FROM users LIMIT 2;",
+  fromCache: false,
+  tableNames: ["users"]
+}
+```
+
+**INSERT Example:**
+```typescript
+const insertResult: QueryResult = {
+  type: "insert",
+  rowCount: 1,
+  affectedRows: 1,
+  executionTime: 8,
+  query: "INSERT INTO users (name, email) VALUES ('Charlie', 'charlie@example.com');",
+  fromCache: false
+}
+```
+
+**Error Example:**
+```typescript
+const errorResult: QueryResult = {
+  type: "error",
+  error: "relation \"nonexistent_table\" does not exist",
+  executionTime: 3,
+  query: "SELECT * FROM nonexistent_table;"
+}
+```
+
+**Cached Result Example:**
+```typescript
+const cachedResult: QueryResult = {
+  type: "select",
+  columns: ["count"],
+  rows: [{ count: "150" }],
+  rowCount: 1,
+  executionTime: 2, // Much faster due to cache
+  query: "SELECT COUNT(*) FROM users;",
+  fromCache: true,
+  cacheHits: 5,
+  cacheAge: 15000, // 15 seconds old
+  isStale: false,
+  tableNames: ["users"]
+}
+```
+
+---
+
+### QueryExecution
+
+Represents a complete query execution (single or multiple statements).
+
+From `/types/query.ts:37-45`:
+
+```typescript
+export interface QueryExecution {
+  id: string
+  query: string
+  results: QueryResult[]
+  executionTime: number
+  timestamp: Date
+  serverId: string
+  database: string
+}
+```
+
+<ParamField path="id" type="string" required>
+  Unique execution identifier
+</ParamField>
+
+<ParamField path="query" type="string" required>
+  Full SQL query (may contain multiple statements)
+</ParamField>
+
+<ParamField path="results" type="QueryResult[]" required>
+  Array of results (one per statement)
+</ParamField>
+
+<ParamField path="executionTime" type="number" required>
+  Total execution time in milliseconds
+</ParamField>
+
+<ParamField path="timestamp" type="Date" required>
+  Execution timestamp
+</ParamField>
+
+<ParamField path="serverId" type="string" required>
+  Server connection ID
+</ParamField>
+
+<ParamField path="database" type="string" required>
+  Target database
+</ParamField>
+
+**Single Statement Example:**
+```typescript
+const execution: QueryExecution = {
+  id: "exec-789",
+  query: "SELECT * FROM users WHERE active = true;",
+  results: [
+    {
+      type: "select",
+      columns: ["id", "name", "email"],
+      rows: [...],
+      rowCount: 50,
+      executionTime: 15,
+      query: "SELECT * FROM users WHERE active = true;"
+    }
+  ],
+  executionTime: 15,
+  timestamp: new Date("2024-03-20T10:30:00Z"),
+  serverId: "conn-123",
+  database: "myapp_production"
+}
+```
+
+**Multiple Statements Example:**
+```typescript
+const multiExecution: QueryExecution = {
+  id: "exec-790",
+  query: "SELECT COUNT(*) FROM users; SELECT COUNT(*) FROM orders;",
+  results: [
+    {
+      type: "select",
+      columns: ["count"],
+      rows: [{ count: "150" }],
+      rowCount: 1,
+      executionTime: 8,
+      query: "SELECT COUNT(*) FROM users;"
+    },
+    {
+      type: "select",
+      columns: ["count"],
+      rows: [{ count: "450" }],
+      rowCount: 1,
+      executionTime: 6,
+      query: "SELECT COUNT(*) FROM orders;"
+    }
+  ],
+  executionTime: 14,
+  timestamp: new Date("2024-03-20T10:31:00Z"),
+  serverId: "conn-123",
+  database: "myapp_production"
+}
+```
+
+---
+
+### QueryTemplate
+
+Predefined query template with placeholders.
+
+From `/types/query.ts:47-53`:
+
+```typescript
+export interface QueryTemplate {
+  id: string
+  name: string
+  description: string
+  content: string
+  category: "select" | "insert" | "update" | "delete" | "ddl" | "utility"
+}
+```
+
+<ParamField path="id" type="string" required>
+  Unique template identifier
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Template name
+</ParamField>
+
+<ParamField path="description" type="string" required>
+  Template description
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  SQL template with placeholders (e.g., `{{table_name}}`)
+</ParamField>
+
+<ParamField path="category" type="string" required>
+  Template category:
+  - `"select"` - SELECT queries
+  - `"insert"` - INSERT statements
+  - `"update"` - UPDATE statements
+  - `"delete"` - DELETE statements
+  - `"ddl"` - Data Definition Language (CREATE, ALTER, DROP)
+  - `"utility"` - Utility commands (VACUUM, ANALYZE, etc.)
+</ParamField>
+
+**Example:**
+```typescript
+const templates: QueryTemplate[] = [
+  {
+    id: "tmpl-1",
+    name: "Select All from Table",
+    description: "Select all rows from a table with optional LIMIT",
+    content: "SELECT * FROM {{table_name}} LIMIT {{limit}};",
+    category: "select"
+  },
+  {
+    id: "tmpl-2",
+    name: "Create Table",
+    description: "Create a new table with basic columns",
+    content: `CREATE TABLE {{table_name}} (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`,
+    category: "ddl"
+  }
+]
+```
+
+---
+
+## Usage Examples
+
+### Processing Query Results
+
+```typescript
+function processQueryResult(result: QueryResult) {
+  if (result.type === "error") {
+    console.error(`Query failed: ${result.error}`);
+    return;
+  }
+  
+  if (result.type === "select" && result.rows) {
+    console.log(`Retrieved ${result.rowCount} rows in ${result.executionTime}ms`);
+    if (result.fromCache) {
+      console.log(`Result served from cache (${result.cacheHits} hits)`);
+    }
+    return result.rows;
+  }
+  
+  if (result.type === "insert" || result.type === "update" || result.type === "delete") {
+    console.log(`${result.affectedRows} rows affected in ${result.executionTime}ms`);
+  }
+}
+```
+
+### Query History Manager
+
+```typescript
+class QueryHistoryManager {
+  private history: QueryExecution[] = [];
+  
+  addExecution(execution: QueryExecution) {
+    this.history.unshift(execution);
+    // Keep last 100 executions
+    if (this.history.length > 100) {
+      this.history = this.history.slice(0, 100);
+    }
+  }
+  
+  getRecentQueries(limit: number = 10): QueryExecution[] {
+    return this.history.slice(0, limit);
+  }
+  
+  getFailedQueries(): QueryExecution[] {
+    return this.history.filter(exec => 
+      exec.results.some(result => result.type === "error")
+    );
+  }
+}
+```
+
+### Template Expansion
+
+```typescript
+function expandTemplate(template: QueryTemplate, vars: Record<string, string>): string {
+  let sql = template.content;
+  for (const [key, value] of Object.entries(vars)) {
+    sql = sql.replace(new RegExp(`{{${key}}}`, 'g'), value);
+  }
+  return sql;
+}
+
+// Usage
+const template: QueryTemplate = {
+  id: "tmpl-1",
+  name: "Select Users",
+  description: "Select users by status",
+  content: "SELECT * FROM {{table}} WHERE {{column}} = '{{value}}';",
+  category: "select"
+};
+
+const query = expandTemplate(template, {
+  table: "users",
+  column: "status",
+  value: "active"
+});
+// Result: "SELECT * FROM users WHERE status = 'active';"
+```
+
+## Cache Invalidation
+
+Use `tableNames` to invalidate cached queries:
+
+```typescript
+function invalidateCacheForTable(tableName: string, cachedResults: QueryResult[]) {
+  return cachedResults.filter(result => 
+    !result.tableNames?.includes(tableName)
+  );
+}
+```
+
+## Related Types
+
+See also:
+- [Server Connection Types](/api/types/server-connection) - Connection interfaces
+- [Database Object Types](/api/types/database-objects) - Schema and table types
+- [Query Execution API](/api/query-execution) - API endpoint documentation

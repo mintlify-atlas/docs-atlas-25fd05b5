@@ -1,0 +1,335 @@
+---
+title: 'Deployment'
+description: 'Deploy Poge to Vercel, Netlify, Railway, or your own infrastructure'
+---
+
+Poge is a Next.js 16 application that can be deployed to any platform supporting Node.js. Since all data is stored client-side in the browser, no database or backend configuration is required.
+
+## Deploy to Vercel (Recommended)
+
+The fastest way to deploy Poge is using Vercel's one-click deployment:
+
+<a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fpoge&project-name=poge&repository-name=poge">
+  <img src="https://vercel.com/button" alt="Deploy to Vercel" height="32" />
+</a>
+
+<Steps>
+  <Step title="Click the Deploy button">
+    Click the "Deploy to Vercel" button above. You'll be prompted to sign in to Vercel if you haven't already.
+  </Step>
+  
+  <Step title="Clone the repository">
+    Vercel will create a copy of the Poge repository in your GitHub account.
+  </Step>
+  
+  <Step title="Deploy">
+    Vercel automatically builds and deploys your application. This typically takes 2-3 minutes.
+  </Step>
+  
+  <Step title="Access your instance">
+    Once deployed, you'll receive a URL like `https://poge-your-name.vercel.app` where you can access your Poge instance.
+  </Step>
+</Steps>
+
+### Manual Vercel Deployment
+
+If you prefer to deploy manually:
+
+<Steps>
+  <Step title="Install Vercel CLI">
+    ```bash
+    npm install -g vercel
+    ```
+  </Step>
+  
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/dev-hari-prasad/poge.git
+    cd poge
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    # or
+    pnpm install
+    # or
+    yarn install
+    ```
+  </Step>
+  
+  <Step title="Deploy">
+    ```bash
+    vercel
+    ```
+    Follow the prompts to link your project and deploy.
+  </Step>
+</Steps>
+
+## Deploy to Netlify
+
+Netlify supports Next.js applications with their Next.js Runtime:
+
+<Steps>
+  <Step title="Connect your repository">
+    1. Log in to [Netlify](https://app.netlify.com)
+    2. Click "Add new site" → "Import an existing project"
+    3. Connect your Git provider and select your Poge repository
+  </Step>
+  
+  <Step title="Configure build settings">
+    Use these build settings:
+    - **Build command**: `npm run build`
+    - **Publish directory**: `.next`
+    - **Functions directory**: Leave empty
+  </Step>
+  
+  <Step title="Deploy">
+    Click "Deploy site" and Netlify will build and deploy your application.
+  </Step>
+</Steps>
+
+### Netlify CLI Deployment
+
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Build the application
+npm run build
+
+# Deploy
+netlify deploy --prod
+```
+
+## Deploy to Railway
+
+Railway provides a simple deployment experience for Next.js applications:
+
+<Steps>
+  <Step title="Create a new project">
+    1. Log in to [Railway](https://railway.app)
+    2. Click "New Project" → "Deploy from GitHub repo"
+    3. Select your Poge repository
+  </Step>
+  
+  <Step title="Configure deployment">
+    Railway automatically detects Next.js and configures the build:
+    - **Build command**: `npm run build`
+    - **Start command**: `npm run start`
+  </Step>
+  
+  <Step title="Deploy">
+    Railway automatically deploys your application. You'll receive a public URL.
+  </Step>
+</Steps>
+
+## Self-Hosted Deployment
+
+### Prerequisites
+
+- Node.js 18.17 or later
+- npm, pnpm, or yarn package manager
+- A server with at least 512MB RAM
+- SSL certificate (recommended for production)
+
+### Docker Deployment
+
+<CodeGroup>
+```dockerfile Dockerfile
+FROM node:18-alpine AS base
+
+# Install dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Build the application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm run build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "server.js"]
+```
+
+```bash docker-compose.yml
+version: '3.8'
+
+services:
+  poge:
+    build: .
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+```
+</CodeGroup>
+
+Deploy with Docker:
+
+```bash
+# Build the image
+docker build -t poge .
+
+# Run the container
+docker run -d -p 3000:3000 --name poge poge
+```
+
+Or use Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+### Traditional Server Deployment
+
+<Steps>
+  <Step title="Clone and install">
+    ```bash
+    git clone https://github.com/dev-hari-prasad/poge.git
+    cd poge
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Build the application">
+    ```bash
+    npm run build
+    ```
+  </Step>
+  
+  <Step title="Start the production server">
+    ```bash
+    npm run start
+    ```
+    
+    By default, the application runs on port 3000. Access it at `http://localhost:3000`
+  </Step>
+  
+  <Step title="Configure as a service (optional)">
+    Create a systemd service file at `/etc/systemd/system/poge.service`:
+    
+    ```ini
+    [Unit]
+    Description=Poge Database Tool
+    After=network.target
+    
+    [Service]
+    Type=simple
+    User=www-data
+    WorkingDirectory=/opt/poge
+    ExecStart=/usr/bin/npm run start
+    Restart=always
+    Environment=NODE_ENV=production
+    Environment=PORT=3000
+    
+    [Install]
+    WantedBy=multi-user.target
+    ```
+    
+    Enable and start the service:
+    ```bash
+    sudo systemctl enable poge
+    sudo systemctl start poge
+    ```
+  </Step>
+</Steps>
+
+## Environment Requirements
+
+### Node.js Version
+
+Poge requires Node.js 18.17 or later. The application uses Next.js 16.1.5, which requires:
+- Node.js 18.17 or later
+- React 19
+
+### Runtime Dependencies
+
+Key dependencies that affect deployment:
+- `next`: 16.1.5
+- `react`: ^19
+- `pg`: ^8.16.3 (for PostgreSQL connections)
+
+### Build Settings
+
+The following build settings are configured in `next.config.mjs`:
+- ESLint checks are skipped during builds (`ignoreDuringBuilds: true`)
+- TypeScript errors are ignored during builds (`ignoreBuildErrors: true`)
+- Image optimization is disabled (`unoptimized: true`)
+
+### Port Configuration
+
+By default, Poge runs on port 3000. You can change this by setting the `PORT` environment variable:
+
+```bash
+PORT=8080 npm run start
+```
+
+## Reverse Proxy Configuration
+
+For production deployments, use a reverse proxy like Nginx or Caddy:
+
+<CodeGroup>
+```nginx Nginx
+server {
+    listen 80;
+    server_name poge.yourdomain.com;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+```caddyfile Caddy
+poge.yourdomain.com {
+    reverse_proxy localhost:3000
+}
+```
+</CodeGroup>
+
+## Post-Deployment Checklist
+
+<Check>Enable HTTPS/SSL for secure database connections</Check>
+<Check>Configure CORS if accessing from multiple domains</Check>
+<Check>Set up monitoring and logging</Check>
+<Check>Test database connectivity from the deployed instance</Check>
+<Check>Verify that client-side storage (LocalStorage) is working correctly</Check>
+
+<Note>
+Remember that Poge stores all data client-side. Each user's data is stored in their browser's LocalStorage, so no server-side data persistence is required.
+</Note>

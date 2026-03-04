@@ -1,0 +1,604 @@
+---
+title: 'Database Object Types'
+description: 'TypeScript interfaces for database schema, tables, columns, and definitions'
+---
+
+## Overview
+
+Poge provides comprehensive TypeScript interfaces for representing PostgreSQL database objects including schemas, tables, views, columns, indexes, and constraints.
+
+## Core Object Types
+
+### DatabaseInfo
+
+Represents a database with its schema structure.
+
+From `/types/database.ts:1-4`:
+
+```typescript
+export interface DatabaseInfo {
+  name: string
+  schemas: SchemaInfo[]
+}
+```
+
+<ParamField path="name" type="string" required>
+  Database name
+</ParamField>
+
+<ParamField path="schemas" type="SchemaInfo[]" required>
+  Array of schemas in the database
+</ParamField>
+
+**Example:**
+```typescript
+const db: DatabaseInfo = {
+  name: "myapp_production",
+  schemas: [
+    { name: "public", tables: [...] },
+    { name: "analytics", tables: [...] }
+  ]
+}
+```
+
+---
+
+### SchemaInfo
+
+Represents a database schema containing tables and views.
+
+From `/types/database.ts:6-9`:
+
+```typescript
+export interface SchemaInfo {
+  name: string
+  tables: TableInfo[]
+}
+```
+
+<ParamField path="name" type="string" required>
+  Schema name (e.g., `"public"`, `"myschema"`)
+</ParamField>
+
+<ParamField path="tables" type="TableInfo[]" required>
+  Array of tables and views in the schema
+</ParamField>
+
+---
+
+### TableInfo
+
+Represents a table, view, or materialized view.
+
+From `/types/database.ts:11-19`:
+
+```typescript
+export interface TableInfo {
+  name: string
+  type: "table" | "view" | "materialized_view"
+  schema: string
+  rowCount?: number
+  columnCount?: number
+  size?: string
+  createdAt?: Date
+}
+```
+
+<ParamField path="name" type="string" required>
+  Table or view name
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Object type:
+  - `"table"` - Regular table
+  - `"view"` - View
+  - `"materialized_view"` - Materialized view
+</ParamField>
+
+<ParamField path="schema" type="string" required>
+  Parent schema name
+</ParamField>
+
+<ParamField path="rowCount" type="number">
+  Estimated row count (from `pg_class.reltuples`)
+</ParamField>
+
+<ParamField path="columnCount" type="number">
+  Number of columns in the table
+</ParamField>
+
+<ParamField path="size" type="string">
+  Table size as human-readable string (e.g., `"1.5 MB"`)
+</ParamField>
+
+<ParamField path="createdAt" type="Date">
+  Table creation timestamp
+</ParamField>
+
+**Example:**
+```typescript
+const table: TableInfo = {
+  name: "users",
+  type: "table",
+  schema: "public",
+  rowCount: 15000,
+  columnCount: 8,
+  size: "2.3 MB",
+  createdAt: new Date("2024-01-15T10:00:00Z")
+}
+```
+
+---
+
+### ColumnInfo
+
+Represents a table column with its metadata.
+
+From `/types/database.ts:21-27`:
+
+```typescript
+export interface ColumnInfo {
+  name: string
+  dataType: string
+  isNullable: boolean
+  defaultValue?: string
+  isPrimaryKey?: boolean
+}
+```
+
+<ParamField path="name" type="string" required>
+  Column name
+</ParamField>
+
+<ParamField path="dataType" type="string" required>
+  PostgreSQL data type (e.g., `"integer"`, `"varchar"`, `"timestamp without time zone"`)
+</ParamField>
+
+<ParamField path="isNullable" type="boolean" required>
+  Whether the column accepts NULL values
+</ParamField>
+
+<ParamField path="defaultValue" type="string">
+  Default value expression (e.g., `"CURRENT_TIMESTAMP"`, `"nextval('users_id_seq')")`)
+</ParamField>
+
+<ParamField path="isPrimaryKey" type="boolean">
+  Whether the column is part of the primary key
+</ParamField>
+
+**Example:**
+```typescript
+const columns: ColumnInfo[] = [
+  {
+    name: "id",
+    dataType: "integer",
+    isNullable: false,
+    defaultValue: "nextval('users_id_seq'::regclass)",
+    isPrimaryKey: true
+  },
+  {
+    name: "email",
+    dataType: "character varying",
+    isNullable: false,
+    isPrimaryKey: false
+  },
+  {
+    name: "created_at",
+    dataType: "timestamp without time zone",
+    isNullable: true,
+    defaultValue: "CURRENT_TIMESTAMP"
+  }
+]
+```
+
+---
+
+### TableData
+
+Represents paginated table data with column metadata.
+
+From `/types/database.ts:29-35`:
+
+```typescript
+export interface TableData {
+  columns: ColumnInfo[]
+  rows: Record<string, any>[]
+  totalRows: number
+  currentPage: number
+  pageSize: number
+}
+```
+
+<ParamField path="columns" type="ColumnInfo[]" required>
+  Column metadata
+</ParamField>
+
+<ParamField path="rows" type="Record<string, any>[]" required>
+  Array of row objects (column name -> value)
+</ParamField>
+
+<ParamField path="totalRows" type="number" required>
+  Total number of rows in the table
+</ParamField>
+
+<ParamField path="currentPage" type="number" required>
+  Current page number (1-indexed)
+</ParamField>
+
+<ParamField path="pageSize" type="number" required>
+  Number of rows per page
+</ParamField>
+
+**Example:**
+```typescript
+const tableData: TableData = {
+  columns: [
+    { name: "id", dataType: "integer", isNullable: false, isPrimaryKey: true },
+    { name: "name", dataType: "varchar", isNullable: false }
+  ],
+  rows: [
+    { id: 1, name: "Alice" },
+    { id: 2, name: "Bob" }
+  ],
+  totalRows: 150,
+  currentPage: 1,
+  pageSize: 50
+}
+```
+
+---
+
+### SelectedTable
+
+Represents the currently selected table in the UI.
+
+From `/types/database.ts:37-44`:
+
+```typescript
+export interface SelectedTable {
+  serverId: string
+  serverName: string
+  database: string
+  schema: string
+  table: string
+  type: "table" | "view" | "materialized_view"
+}
+```
+
+<ParamField path="serverId" type="string" required>
+  Server connection ID
+</ParamField>
+
+<ParamField path="serverName" type="string" required>
+  Human-readable server name
+</ParamField>
+
+<ParamField path="database" type="string" required>
+  Database name
+</ParamField>
+
+<ParamField path="schema" type="string" required>
+  Schema name
+</ParamField>
+
+<ParamField path="table" type="string" required>
+  Table or view name
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Object type (`"table"`, `"view"`, `"materialized_view"`)
+</ParamField>
+
+---
+
+## Schema Definition Types
+
+### ColumnDefinition
+
+Extended column definition with full metadata.
+
+From `/types/schema.ts:12-24`:
+
+```typescript
+export interface ColumnDefinition {
+  name: string
+  dataType: string
+  length?: number
+  precision?: number
+  scale?: number
+  isNullable: boolean
+  defaultValue?: string
+  isPrimaryKey: boolean
+  isUnique: boolean
+  isAutoIncrement: boolean
+  comment?: string
+}
+```
+
+<ParamField path="name" type="string" required>
+  Column name
+</ParamField>
+
+<ParamField path="dataType" type="string" required>
+  PostgreSQL data type
+</ParamField>
+
+<ParamField path="length" type="number">
+  Character length for VARCHAR, CHAR types
+</ParamField>
+
+<ParamField path="precision" type="number">
+  Numeric precision (total digits)
+</ParamField>
+
+<ParamField path="scale" type="number">
+  Numeric scale (decimal places)
+</ParamField>
+
+<ParamField path="isNullable" type="boolean" required>
+  Whether NULL values are allowed
+</ParamField>
+
+<ParamField path="defaultValue" type="string">
+  Default value expression
+</ParamField>
+
+<ParamField path="isPrimaryKey" type="boolean" required>
+  Whether column is part of primary key
+</ParamField>
+
+<ParamField path="isUnique" type="boolean" required>
+  Whether column has UNIQUE constraint
+</ParamField>
+
+<ParamField path="isAutoIncrement" type="boolean" required>
+  Whether column auto-increments (SERIAL, IDENTITY)
+</ParamField>
+
+<ParamField path="comment" type="string">
+  Column comment/description
+</ParamField>
+
+---
+
+### IndexDefinition
+
+Represents a database index.
+
+From `/types/schema.ts:26-32`:
+
+```typescript
+export interface IndexDefinition {
+  name: string
+  columns: string[]
+  isUnique: boolean
+  type: "btree" | "hash" | "gin" | "gist"
+  condition?: string
+}
+```
+
+<ParamField path="name" type="string" required>
+  Index name
+</ParamField>
+
+<ParamField path="columns" type="string[]" required>
+  Array of column names in the index
+</ParamField>
+
+<ParamField path="isUnique" type="boolean" required>
+  Whether index enforces uniqueness
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Index type: `"btree"`, `"hash"`, `"gin"`, `"gist"`
+</ParamField>
+
+<ParamField path="condition" type="string">
+  Partial index condition (WHERE clause)
+</ParamField>
+
+**Example:**
+```typescript
+const index: IndexDefinition = {
+  name: "idx_users_email",
+  columns: ["email"],
+  isUnique: true,
+  type: "btree"
+}
+```
+
+---
+
+### ConstraintDefinition
+
+Represents a table constraint.
+
+From `/types/schema.ts:34-43`:
+
+```typescript
+export interface ConstraintDefinition {
+  name: string
+  type: "primary_key" | "foreign_key" | "unique" | "check"
+  columns: string[]
+  referencedTable?: string
+  referencedColumns?: string[]
+  onUpdate?: "cascade" | "restrict" | "set_null" | "set_default"
+  onDelete?: "cascade" | "restrict" | "set_null" | "set_default"
+  checkExpression?: string
+}
+```
+
+<ParamField path="name" type="string" required>
+  Constraint name
+</ParamField>
+
+<ParamField path="type" type="string" required>
+  Constraint type:
+  - `"primary_key"` - Primary key
+  - `"foreign_key"` - Foreign key reference
+  - `"unique"` - Unique constraint
+  - `"check"` - Check constraint
+</ParamField>
+
+<ParamField path="columns" type="string[]" required>
+  Columns involved in the constraint
+</ParamField>
+
+<ParamField path="referencedTable" type="string">
+  Referenced table for foreign keys
+</ParamField>
+
+<ParamField path="referencedColumns" type="string[]">
+  Referenced columns for foreign keys
+</ParamField>
+
+<ParamField path="onUpdate" type="string">
+  Foreign key ON UPDATE action: `"cascade"`, `"restrict"`, `"set_null"`, `"set_default"`
+</ParamField>
+
+<ParamField path="onDelete" type="string">
+  Foreign key ON DELETE action: `"cascade"`, `"restrict"`, `"set_null"`, `"set_default"`
+</ParamField>
+
+<ParamField path="checkExpression" type="string">
+  CHECK constraint expression
+</ParamField>
+
+**Example:**
+```typescript
+const constraints: ConstraintDefinition[] = [
+  {
+    name: "users_pkey",
+    type: "primary_key",
+    columns: ["id"]
+  },
+  {
+    name: "fk_orders_user_id",
+    type: "foreign_key",
+    columns: ["user_id"],
+    referencedTable: "users",
+    referencedColumns: ["id"],
+    onUpdate: "cascade",
+    onDelete: "restrict"
+  },
+  {
+    name: "check_age_positive",
+    type: "check",
+    columns: ["age"],
+    checkExpression: "age > 0"
+  }
+]
+```
+
+---
+
+### TableDefinition
+
+Complete table definition with columns, indexes, and constraints.
+
+From `/types/schema.ts:45-52`:
+
+```typescript
+export interface TableDefinition {
+  name: string
+  schema: string
+  columns: ColumnDefinition[]
+  indexes: IndexDefinition[]
+  constraints: ConstraintDefinition[]
+  comment?: string
+}
+```
+
+---
+
+### ViewDefinition
+
+View definition with SQL.
+
+From `/types/schema.ts:54-59`:
+
+```typescript
+export interface ViewDefinition {
+  name: string
+  schema: string
+  definition: string
+  comment?: string
+}
+```
+
+---
+
+### DatabaseDefinition
+
+Database metadata.
+
+From `/types/schema.ts:61-68`:
+
+```typescript
+export interface DatabaseDefinition {
+  name: string
+  encoding: string
+  collation: string
+  template?: string
+  owner?: string
+  comment?: string
+}
+```
+
+---
+
+### SchemaDefinition
+
+Schema metadata.
+
+From `/types/schema.ts:70-75`:
+
+```typescript
+export interface SchemaDefinition {
+  name: string
+  database: string
+  owner?: string
+  comment?: string
+}
+```
+
+---
+
+## Use Cases
+
+### Building a Schema Explorer
+
+```typescript
+function renderSchemaTree(db: DatabaseInfo) {
+  return db.schemas.map(schema => ({
+    label: schema.name,
+    children: schema.tables.map(table => ({
+      label: `${table.name} (${table.type})`,
+      rowCount: table.rowCount,
+      icon: table.type === 'table' ? 'table' : 'view'
+    }))
+  }));
+}
+```
+
+### Generating CREATE TABLE DDL
+
+```typescript
+function generateCreateTable(def: TableDefinition): string {
+  const columns = def.columns.map(col => {
+    let ddl = `  ${col.name} ${col.dataType}`;
+    if (col.length) ddl += `(${col.length})`;
+    if (!col.isNullable) ddl += ' NOT NULL';
+    if (col.defaultValue) ddl += ` DEFAULT ${col.defaultValue}`;
+    return ddl;
+  });
+  
+  return `CREATE TABLE ${def.schema}.${def.name} (\n${columns.join(',\n')}\n);`;
+}
+```
+
+## Related Types
+
+See also:
+- [Server Connection Types](/api/types/server-connection) - Connection interfaces
+- [Query Result Types](/api/types/query-results) - Query execution types

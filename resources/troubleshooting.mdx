@@ -1,0 +1,271 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Poge
+---
+
+This page covers common issues you might encounter while using Poge and their solutions.
+
+## Connection Issues
+
+<AccordionGroup>
+  <Accordion title="Connection fails with 'Connection refused' error">
+    **Possible causes:**
+    - PostgreSQL server is not running
+    - Incorrect host or port configuration
+    - Firewall blocking the connection
+
+    **Solutions:**
+    1. Verify that your PostgreSQL server is running
+    2. Double-check your connection details (host, port, database name)
+    3. Ensure your PostgreSQL server accepts connections from your IP address
+    4. Check your firewall settings and allow connections to PostgreSQL port (default: 5432)
+    5. If connecting to a cloud database, verify that your IP is whitelisted
+  </Accordion>
+
+  <Accordion title="Connection fails with authentication error">
+    **Possible causes:**
+    - Incorrect username or password
+    - User doesn't have access to the specified database
+    - PostgreSQL authentication configuration (pg_hba.conf) blocking connection
+
+    **Solutions:**
+    1. Verify your username and password are correct
+    2. Check that the user has permissions for the target database
+    3. Review PostgreSQL's pg_hba.conf file for authentication rules
+    4. Try connecting with a different user that has proper permissions
+  </Accordion>
+</AccordionGroup>
+
+## SSL/TLS Issues
+
+<AccordionGroup>
+  <Accordion title="SSL connection errors">
+    **Possible causes:**
+    - Server requires SSL but connection attempt is not using SSL
+    - Certificate validation failures
+    - Mismatched SSL configuration
+
+    **Solutions:**
+    1. Check if your PostgreSQL server requires SSL connections
+    2. Verify SSL certificates are valid and not expired
+    3. For local development, you may need to disable SSL verification
+    4. Ensure your PostgreSQL server's SSL configuration matches client requirements
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+  When connecting to cloud PostgreSQL providers (AWS RDS, Azure Database, etc.), SSL is typically required by default.
+</Info>
+
+## Browser Storage Issues
+
+<AccordionGroup>
+  <Accordion title="Data not persisting between sessions">
+    **Possible causes:**
+    - Browser running in private/incognito mode
+    - Browser storage being cleared automatically
+    - Storage quota exceeded
+
+    **Solutions:**
+    1. Ensure you're not using private/incognito mode
+    2. Check your browser settings to prevent automatic clearing of site data
+    3. Try exporting your data and clearing old saved queries to free up space
+    4. Use the export feature to backup your connections and queries regularly
+  </Accordion>
+
+  <Accordion title="Storage quota exceeded error">
+    **Possible causes:**
+    - Too many saved queries or large query results
+    - Browser storage limits reached
+
+    **Solutions:**
+    1. Delete old or unnecessary saved queries
+    2. Clear your query history periodically
+    3. Export important queries to .enc or .json files
+    4. Consider using a different browser with higher storage limits
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+  Poge stores all data locally in your browser's Local Storage. Regular exports help prevent data loss.
+</Info>
+
+## Session & Lock Issues
+
+<AccordionGroup>
+  <Accordion title="Session auto-lock not working as expected">
+    **Possible causes:**
+    - Timeout settings not properly saved
+    - Browser tab in background affecting timer
+
+    **Solutions:**
+    1. Go to Settings and verify your auto-lock timeout configuration
+    2. Ensure you've saved your settings after making changes
+    3. Test with a shorter timeout period to verify functionality
+    4. Check that your browser isn't suspending background tabs
+
+    <Info>
+      As of v0.2, the auto-lock mechanism strictly adheres to user-defined timeout settings.
+    </Info>
+  </Accordion>
+
+  <Accordion title="Cannot unlock session - PIN not working">
+    **Possible causes:**
+    - Incorrect PIN entry
+    - Browser storage cleared
+    - Corrupted session data
+
+    **Solutions:**
+    1. Ensure you're entering the correct PIN
+    2. Check if your browser data was cleared (this resets the PIN)
+    3. If you've lost access, you may need to clear browser storage and reconfigure
+    4. Use the export feature regularly to backup your encrypted data
+  </Accordion>
+</AccordionGroup>
+
+## Import/Export Issues
+
+<AccordionGroup>
+  <Accordion title="Cannot import .enc file">
+    **Possible causes:**
+    - Corrupted or invalid .enc file
+    - File was modified or damaged
+    - Encryption key mismatch
+
+    **Solutions:**
+    1. Verify the .enc file wasn't corrupted during transfer
+    2. Ensure you're using a file exported from Poge
+    3. Try exporting a new backup and testing the import immediately
+    4. Check that the file size matches expectations (not 0 bytes)
+  </Accordion>
+
+  <Accordion title="Export file is empty or invalid">
+    **Possible causes:**
+    - Browser blocking file downloads
+    - Insufficient permissions to write files
+    - No data to export
+
+    **Solutions:**
+    1. Check your browser's download settings and permissions
+    2. Verify you have saved connections or queries to export
+    3. Try a different browser if the issue persists
+    4. Disable browser extensions that might interfere with downloads
+  </Accordion>
+
+  <Accordion title="Settings-only JSON import fails">
+    **Possible causes:**
+    - Invalid JSON format
+    - JSON file from incompatible version
+    - File corruption
+
+    **Solutions:**
+    1. Validate your JSON file using a JSON validator
+    2. Ensure the JSON was exported from a compatible Poge version
+    3. Try opening the file in a text editor to check for obvious errors
+    4. Use .enc format instead for more reliable exports
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  Never share your exported .enc files or expose them publicly. They contain sensitive connection details and credentials that could compromise your database security.
+</Warning>
+
+## Query Execution Issues
+
+<AccordionGroup>
+  <Accordion title="Query runs but shows no results">
+    **Possible causes:**
+    - Query legitimately returns no rows
+    - Connection timeout
+    - Large result set taking time to load
+
+    **Solutions:**
+    1. Add `LIMIT` clause to test with smaller result sets
+    2. Check query syntax and table/column names
+    3. Verify you're connected to the correct database
+    4. Use `SELECT COUNT(*)` to verify data exists
+  </Accordion>
+
+  <Accordion title="Query editor showing stale content">
+    **Possible causes:**
+    - UI state synchronization issue
+
+    **Solutions:**
+    1. Refresh the page to reload the latest state
+    2. This issue was fixed in v0.2.1 - ensure you're using the latest version
+    3. Clear browser cache if using an older cached version
+  </Accordion>
+</AccordionGroup>
+
+## Table Operations Issues
+
+<AccordionGroup>
+  <Accordion title="Cannot edit table data">
+    **Possible causes:**
+    - Insufficient database permissions
+    - Table has no primary key
+    - Connection is read-only
+
+    **Solutions:**
+    1. Verify your database user has UPDATE permissions
+    2. Check that the table has a primary key defined
+    3. Confirm you're not connected with a read-only user
+    4. Review PostgreSQL grants for your user role
+  </Accordion>
+
+  <Accordion title="Edit Table dialog shows SQL errors with empty fields">
+    **Possible causes:**
+    - Validation not handling NULL values correctly
+
+    **Solutions:**
+    1. This was fixed in v0.2.1 - update to the latest version
+    2. Ensure you're filling in all required fields
+    3. Use NULL explicitly for nullable columns if needed
+  </Accordion>
+</AccordionGroup>
+
+## Performance Issues
+
+<AccordionGroup>
+  <Accordion title="Slow query execution">
+    **Possible causes:**
+    - Large table without proper indexes
+    - Complex query requiring optimization
+    - Network latency to remote database
+
+    **Solutions:**
+    1. Use `EXPLAIN ANALYZE` to understand query performance
+    2. Add appropriate indexes to frequently queried columns
+    3. Limit result sets using WHERE clauses and LIMIT
+    4. Consider using materialized views for complex aggregations
+    5. For remote databases, check your network connection
+  </Accordion>
+
+  <Accordion title="UI becomes unresponsive with large result sets">
+    **Possible causes:**
+    - Rendering too many rows in the browser
+    - Memory constraints
+
+    **Solutions:**
+    1. Use LIMIT to restrict the number of rows returned
+    2. Use pagination for large datasets
+    3. Export large result sets instead of viewing in-browser
+    4. Consider aggregating data before displaying
+  </Accordion>
+</AccordionGroup>
+
+## Still Having Issues?
+
+If you're experiencing issues not covered here:
+
+1. Check the [changelog](/resources/changelog) to see if your issue was fixed in a recent version
+2. Search existing issues on [GitHub Issues](https://github.com/dev-hari-prasad/poge/issues)
+3. Open a new issue with:
+   - Clear description of the problem
+   - Steps to reproduce
+   - Browser and version information
+   - Any error messages from the browser console
+
+<Info>
+  For security vulnerabilities, do not open a public issue. Instead, follow the private reporting process outlined in the [Security Policy](https://github.com/dev-hari-prasad/poge?tab=security-ov-file).
+</Info>

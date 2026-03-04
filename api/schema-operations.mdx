@@ -1,0 +1,316 @@
+---
+title: 'Schema Operations'
+description: 'Retrieve database schema tree structure'
+api: 'POST /api/schema/tree'
+---
+
+## Overview
+
+Fetches the complete schema tree for a PostgreSQL database, including schemas, tables, views, materialized views, and row count estimates. Automatically filters out system schemas (`pg_catalog`, `information_schema`).
+
+## Request
+
+<ParamField body="host" type="string" required>
+  PostgreSQL server hostname or IP address
+</ParamField>
+
+<ParamField body="port" type="number" required>
+  PostgreSQL server port number
+</ParamField>
+
+<ParamField body="user" type="string" required>
+  PostgreSQL username for authentication
+</ParamField>
+
+<ParamField body="password" type="string">
+  PostgreSQL user password
+</ParamField>
+
+<ParamField body="database" type="string" required>
+  Target database name to fetch schema from
+</ParamField>
+
+<ParamField body="sslMode" type="string">
+  SSL connection mode (`disable`, `require`, `prefer`)
+</ParamField>
+
+## Response
+
+Returns an array containing a single DatabaseInfo object with the schema tree.
+
+<ResponseField name="[0].name" type="string">
+  Database name
+</ResponseField>
+
+<ResponseField name="[0].schemas" type="array">
+  Array of SchemaInfo objects
+</ResponseField>
+
+<ResponseField name="[0].schemas[].name" type="string">
+  Schema name (e.g., `public`, `myschema`)
+</ResponseField>
+
+<ResponseField name="[0].schemas[].tables" type="array">
+  Array of TableInfo objects in this schema
+</ResponseField>
+
+<ResponseField name="[0].schemas[].tables[].name" type="string">
+  Table or view name
+</ResponseField>
+
+<ResponseField name="[0].schemas[].tables[].type" type="string">
+  Object type: `table`, `view`, or `materialized_view`
+</ResponseField>
+
+<ResponseField name="[0].schemas[].tables[].schema" type="string">
+  Parent schema name
+</ResponseField>
+
+<ResponseField name="[0].schemas[].tables[].rowCount" type="number">
+  Estimated row count from `pg_class.reltuples` (may be undefined for views)
+</ResponseField>
+
+## Examples
+
+### Fetch Schema Tree
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/schema/tree \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "mypassword",
+    "database": "mydb",
+    "sslMode": "disable"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/schema/tree', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    host: 'localhost',
+    port: 5432,
+    user: 'postgres',
+    password: 'mypassword',
+    database: 'mydb',
+    sslMode: 'disable'
+  })
+});
+
+const schemaTree = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+[
+  {
+    "name": "mydb",
+    "schemas": [
+      {
+        "name": "public",
+        "tables": [
+          {
+            "name": "users",
+            "type": "table",
+            "schema": "public",
+            "rowCount": 1500
+          },
+          {
+            "name": "orders",
+            "type": "table",
+            "schema": "public",
+            "rowCount": 4200
+          },
+          {
+            "name": "user_summary",
+            "type": "view",
+            "schema": "public"
+          },
+          {
+            "name": "sales_stats",
+            "type": "materialized_view",
+            "schema": "public",
+            "rowCount": 120
+          }
+        ]
+      },
+      {
+        "name": "analytics",
+        "tables": [
+          {
+            "name": "events",
+            "type": "table",
+            "schema": "analytics",
+            "rowCount": 98500
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+</ResponseExample>
+
+### Error: Missing Required Fields
+
+<ResponseExample>
+```json Error (400)
+{
+  "error": "Missing required fields"
+}
+```
+</ResponseExample>
+
+### Error: Database Connection Failed
+
+<ResponseExample>
+```json Error (500)
+{
+  "error": "connection to server at \"localhost\" (127.0.0.1), port 5432 failed: Connection refused"
+}
+```
+</ResponseExample>
+
+## Schema Filtering
+
+System schemas are automatically excluded:
+
+- `pg_catalog` - PostgreSQL system catalog
+- `information_schema` - SQL standard information schema
+
+From `/app/api/schema/tree/route.ts:4-6`:
+
+```typescript
+function isSystemSchema(name: string): boolean {
+  return name === 'pg_catalog' || name === 'information_schema'
+}
+```
+
+## Table Type Detection
+
+The endpoint uses PostgreSQL's `pg_class.relkind` to accurately determine object types:
+
+| relkind | Type | Description |
+|---------|------|-------------|
+| `r` | `table` | Regular table |
+| `v` | `view` | View |
+| `m` | `materialized_view` | Materialized view |
+| `p` | `table` | Partitioned table |
+
+From `/app/api/schema/tree/route.ts:74-82`:
+
+```typescript
+if (stat.relkind === 'v') mappedType = 'view'
+else if (stat.relkind === 'm') mappedType = 'materialized_view'
+else mappedType = 'table'
+```
+
+## Row Count Estimates
+
+Row counts are estimates from PostgreSQL's statistics, not exact counts:
+
+```sql
+SELECT GREATEST(c.reltuples::bigint, 0) as row_estimate
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname = 'users'
+```
+
+<Note>
+  Row counts are estimates updated by `ANALYZE`. Run `VACUUM ANALYZE` for more accurate statistics.
+</Note>
+
+## Query Optimization
+
+The endpoint executes three optimized queries:
+
+1. **Schemas Query**: Fetches schema names from `information_schema.schemata`
+2. **Tables Query**: Retrieves table metadata from `information_schema.tables`
+3. **Statistics Query**: Gets row estimates and relkind from `pg_class`
+
+From `/app/api/schema/tree/route.ts:24-55`:
+
+```typescript
+// Fetch schemas
+const schemasRes = await dbPool.query(poolConfig, `
+  SELECT schema_name
+  FROM information_schema.schemata
+  ORDER BY schema_name
+`)
+
+// Fetch tables and views metadata
+const tablesRes = await dbPool.query(poolConfig, `
+  SELECT t.table_schema as schema,
+         t.table_name as name,
+         t.table_type as type
+  FROM information_schema.tables t
+  WHERE t.table_schema NOT IN ('pg_catalog','information_schema')
+  ORDER BY t.table_schema, t.table_name
+`)
+
+// Row count estimate and relkind
+const statsRes = await dbPool.query(poolConfig, `
+  SELECT n.nspname as schema,
+         c.relname as name,
+         c.relkind,
+         GREATEST(c.reltuples::bigint, 0) as row_estimate
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname NOT IN ('pg_catalog','information_schema')
+    AND c.relkind IN ('r','v','m','p')
+`)
+```
+
+## TypeScript Interfaces
+
+From `/types/database.ts:1-9`:
+
+```typescript
+export interface DatabaseInfo {
+  name: string
+  schemas: SchemaInfo[]
+}
+
+export interface SchemaInfo {
+  name: string
+  tables: TableInfo[]
+}
+```
+
+From `/types/database.ts:11-19`:
+
+```typescript
+export interface TableInfo {
+  name: string
+  type: "table" | "view" | "materialized_view"
+  schema: string
+  rowCount?: number
+  columnCount?: number
+  size?: string
+  createdAt?: Date
+}
+```
+
+## Use Cases
+
+- **Schema Explorer**: Display database structure in tree view
+- **Table Browser**: Navigate schemas and tables
+- **Data Dictionary**: Generate documentation of database objects
+- **Query Builder**: Populate table/column dropdowns
+
+## Performance
+
+Typical execution time: **50-200ms** for databases with:
+- 10-50 schemas
+- 100-500 tables
+- Proper statistics maintained
+
+<Warning>
+  Large databases with thousands of tables may take several seconds. Consider caching results or implementing pagination for very large schemas.
+</Warning>

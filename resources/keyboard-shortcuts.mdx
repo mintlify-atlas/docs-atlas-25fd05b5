@@ -1,0 +1,85 @@
+---
+title: Keyboard Shortcuts
+description: Complete list of keyboard shortcuts in Poge
+---
+
+Poge supports keyboard shortcuts to help you work more efficiently. Shortcuts are organized by feature area below.
+
+<Info>
+  Poge uses `⌘` (Command) on macOS and `Ctrl` on Windows/Linux. The shortcuts shown below will automatically adapt to your operating system.
+</Info>
+
+## Query Execution
+
+These shortcuts help you work with the Query Tool.
+
+| Action | macOS | Windows/Linux | Description |
+|--------|-------|---------------|-------------|
+| Run Query | `⌘ + Enter` | `Ctrl + Enter` | Execute the current SQL query |
+
+<Info>
+  The Query Tool keyboard shortcuts were introduced in v0.2.5 with a modular setup that allows for adding more shortcuts in the future.
+</Info>
+
+## How Keyboard Shortcuts Work
+
+Poge's keyboard shortcut system is designed to be:
+
+- **Cross-platform**: Automatically detects macOS and uses `⌘` (Command) instead of `Ctrl`
+- **Non-intrusive**: Shortcuts only activate when the appropriate context is active
+- **Extensible**: Built on a modular architecture that makes it easy to add new shortcuts
+
+### Platform Detection
+
+The system automatically detects your platform:
+- On macOS (Mac, iPad, iPhone, iPod), shortcuts use the `⌘` (Command) key
+- On Windows and Linux, shortcuts use the `Ctrl` key
+
+This ensures a native feel regardless of which operating system you're using.
+
+### Modifier Keys
+
+Keyboard shortcuts can use the following modifier keys:
+
+- `Ctrl` - Control key (Windows/Linux)
+- `Meta` - Command key ⌘ (macOS)
+- `Alt` - Alt/Option key
+- `Shift` - Shift key
+
+Modifiers can be combined with regular keys to create shortcuts.
+
+## Future Shortcuts
+
+The keyboard shortcut system is designed to support additional shortcuts in the future. Potential areas for expansion include:
+
+- Navigation between database connections
+- Quick access to saved queries
+- Table browsing and schema exploration
+- Settings and configuration
+- Export/import operations
+
+If you have suggestions for additional keyboard shortcuts that would improve your workflow, please share them on [GitHub Issues](https://github.com/dev-hari-prasad/poge/issues).
+
+## Customization
+
+Currently, keyboard shortcuts are not customizable. The default shortcuts are designed to:
+
+- Follow common conventions (e.g., `Ctrl/⌘ + Enter` for execution)
+- Avoid conflicts with browser shortcuts
+- Work consistently across different operating systems
+
+If you need different keyboard shortcuts, you can fork Poge and modify the shortcuts in `hooks/use-keyboard-shortcuts.ts` and the respective component files.
+
+## Technical Details
+
+For developers interested in how keyboard shortcuts are implemented:
+
+- Shortcuts are defined using the `KeyboardShortcut` interface in `hooks/use-keyboard-shortcuts.ts`
+- Each shortcut includes an ID, key combination, display label, and handler function
+- The `useKeyboardShortcuts` hook registers shortcuts and handles keyboard events
+- Shortcuts are scoped to specific components to avoid conflicts
+- Event propagation is stopped when a shortcut is triggered to prevent side effects
+
+<Info>
+  If you're building on top of Poge or forking it, you can easily add new shortcuts by defining them in the component where they're needed and passing them to `useKeyboardShortcuts`.
+</Info>

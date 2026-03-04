@@ -1,0 +1,254 @@
+---
+title: Query tool
+description: Write and execute SQL queries with syntax highlighting, multi-statement support, and automatic query history
+---
+
+The query tool is Poge's primary interface for running SQL queries against your PostgreSQL databases. It provides a powerful editor with syntax highlighting, intelligent query execution, and comprehensive result viewing.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Multi-statement execution" icon="layer-group">
+    Execute multiple SQL statements in a single query with automatic transaction handling
+  </Card>
+  <Card title="Query history" icon="clock-rotate-left">
+    Automatically track every query you run with timestamps and results
+  </Card>
+  <Card title="Saved queries" icon="bookmark">
+    Save frequently used queries for quick access and reuse
+  </Card>
+  <Card title="Syntax highlighting" icon="code">
+    SQL syntax highlighting makes your queries easier to read and write
+  </Card>
+</CardGroup>
+
+## Writing queries
+
+The query editor supports full SQL syntax with syntax highlighting powered by highlight.js. Write your queries in the editor panel and execute them with the keyboard shortcut or run button.
+
+### Running queries
+
+Execute your query using the keyboard shortcut:
+
+- **macOS**: `Cmd + Enter`
+- **Windows/Linux**: `Ctrl + Enter`
+
+Or click the **Run Query** button in the toolbar.
+
+<Info>
+You can also run only a selected portion of your query by highlighting the text you want to execute before running.
+</Info>
+
+## Multi-statement execution
+
+Poge intelligently handles multiple SQL statements in a single query. The query parser (found in `lib/query-parser.ts`) determines the best execution strategy:
+
+### Concurrent execution
+
+Read-only statements (SELECT queries) are executed in parallel for maximum performance:
+
+```sql
+SELECT * FROM users LIMIT 10;
+SELECT * FROM orders WHERE status = 'pending';
+SELECT COUNT(*) FROM products;
+```
+
+All three queries run simultaneously and return results independently.
+
+### Transaction execution
+
+Write operations (INSERT, UPDATE, DELETE, CREATE, DROP) are wrapped in a transaction automatically:
+
+```sql
+BEGIN;
+UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;
+```
+
+If any statement fails, the entire transaction is rolled back to maintain data integrity.
+
+### Sequential execution
+
+Mixed operations (reads and writes) execute sequentially:
+
+```sql
+INSERT INTO users (name, email) VALUES ('John', 'john@example.com');
+SELECT * FROM users WHERE email = 'john@example.com';
+```
+
+## Query results
+
+Results appear in the bottom panel with multiple tabs when executing multiple statements. Each result includes:
+
+- **Row data**: Table view with all returned rows
+- **Row count**: Number of rows affected or returned
+- **Execution time**: Query duration in milliseconds
+- **Command type**: The SQL command that was executed (SELECT, INSERT, UPDATE, etc.)
+
+### Result actions
+
+For each result set, you can:
+
+- **Export data**: Download as CSV, JSON, or Excel
+- **Copy to clipboard**: Copy result data or formatted table
+- **Expand view**: View results in a larger modal
+- **Save to file**: Save the complete result set
+
+<Tabs>
+  <Tab title="CSV Export">
+    ```csv
+    id,name,email,created_at
+    1,John Doe,john@example.com,2024-01-15
+    2,Jane Smith,jane@example.com,2024-01-16
+    ```
+  </Tab>
+  <Tab title="JSON Export">
+    ```json
+    [
+      {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john@example.com",
+        "created_at": "2024-01-15"
+      },
+      {
+        "id": 2,
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "created_at": "2024-01-16"
+      }
+    ]
+    ```
+  </Tab>
+</Tabs>
+
+## Query history
+
+Every query you execute is automatically saved to your query history. Access it by clicking the **History** button or using the clock icon in the toolbar.
+
+The history includes:
+
+- Full query text
+- Execution timestamp
+- Server and database used
+- Execution time
+- Number of rows affected
+- Success/error status
+
+<Info>
+Query history is stored locally in your browser and persists across sessions. It's included in encrypted backups.
+</Info>
+
+### Rerunning queries
+
+Click any query in your history to load it into the editor. You can then modify and re-execute it.
+
+## Saved queries
+
+Save frequently used queries for quick access:
+
+1. Write or load a query in the editor
+2. Click the **Save Query** button (bookmark icon)
+3. Give your query a name and optional description
+4. Click **Save**
+
+Your saved queries appear in the **Load Query** dialog, organized by server and database.
+
+### Query templates
+
+Poge includes built-in query templates for common operations:
+
+- Table inspection (`SELECT * FROM table LIMIT 10`)
+- Schema exploration (`\d tablename`)
+- Index analysis (`SELECT * FROM pg_indexes WHERE tablename = 'table'`)
+- Active connections (`SELECT * FROM pg_stat_activity`)
+- Database size (`SELECT pg_size_pretty(pg_database_size(current_database()))`)
+
+Access templates by clicking the **Templates** button in the toolbar.
+
+## Connection management
+
+Switch between connected servers and databases using the dropdown selectors in the toolbar:
+
+1. **Server selector**: Choose which PostgreSQL server to query
+2. **Database selector**: Choose which database on that server
+
+<Warning>
+Make sure you're connected to the correct database before running write operations (INSERT, UPDATE, DELETE, DROP).
+</Warning>
+
+## Performance features
+
+### Query optimization
+
+The query optimizer (`lib/query-parser.ts`) automatically:
+
+- Removes unnecessary whitespace
+- Strips SQL comments
+- Optimizes query execution order
+
+### Connection pooling
+
+Poge maintains connection pools (`lib/db-pool.ts`) for each database to:
+
+- Reuse connections across queries
+- Reduce connection overhead
+- Improve query performance
+
+View pool statistics by clicking the **Stats** button in the toolbar.
+
+## Keyboard shortcuts
+
+| Action | macOS | Windows/Linux |
+|--------|-------|---------------|
+| Run query | `Cmd + Enter` | `Ctrl + Enter` |
+| Save query | `Cmd + S` | `Ctrl + S` |
+| Load query | `Cmd + O` | `Ctrl + O` |
+| New tab | `Cmd + T` | `Ctrl + T` |
+| Close tab | `Cmd + W` | `Ctrl + W` |
+
+<Info>
+More keyboard shortcuts are planned for future releases. The shortcut system in `hooks/use-keyboard-shortcuts.ts` is designed to be extensible.
+</Info>
+
+## Error handling
+
+When a query fails, Poge displays detailed error information:
+
+- **Error message**: Description of what went wrong
+- **Error code**: PostgreSQL error code
+- **Severity**: Error severity level (ERROR, WARNING, etc.)
+- **Routine**: Internal PostgreSQL function that raised the error
+- **Line number**: Line in your query where the error occurred (if available)
+
+Example error:
+
+```sql
+SELECT * FROM nonexistent_table;
+```
+
+```
+ERROR: relation "nonexistent_table" does not exist
+LINE 1: SELECT * FROM nonexistent_table;
+                      ^
+Code: 42P01
+Severity: ERROR
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Table viewer" icon="table" href="/features/table-viewer">
+    Browse and edit table data with the table viewer
+  </Card>
+  <Card title="Schema explorer" icon="sitemap" href="/features/schema-explorer">
+    Navigate your database structure visually
+  </Card>
+  <Card title="Query API reference" icon="code" href="/api/query-execution">
+    Learn about the query execution API
+  </Card>
+  <Card title="Keyboard shortcuts" icon="keyboard" href="/resources/keyboard-shortcuts">
+    Master all available keyboard shortcuts
+  </Card>
+</CardGroup>

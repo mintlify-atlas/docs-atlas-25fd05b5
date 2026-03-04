@@ -1,0 +1,290 @@
+---
+title: Table viewer
+description: Browse, edit, and manage table data with pagination, filtering, and export capabilities
+---
+
+The table viewer provides a spreadsheet-like interface for browsing and managing data in your PostgreSQL tables. It supports large datasets with virtualized rendering, inline editing, and flexible export options.
+
+## Opening tables
+
+Access the table viewer from the schema explorer:
+
+1. Navigate to **Table Viewer** in the sidebar
+2. Expand your server and database in the tree
+3. Click any table name to open it
+
+<Info>
+The currently selected table is highlighted in the tree, making it easy to see what you're viewing.
+</Info>
+
+## Viewing data
+
+The table viewer displays your data in a grid with:
+
+- **Column headers**: Clickable headers showing column names and data types
+- **Row data**: All column values for each row
+- **Pagination controls**: Navigate through large datasets
+- **Row counter**: Total number of rows in the table
+
+### Virtual rendering
+
+For tables with thousands of rows, Poge uses virtual rendering (`components/virtual-table.tsx`) to:
+
+- Render only visible rows
+- Maintain smooth scrolling performance
+- Handle datasets of any size
+
+## Pagination
+
+Tables are loaded in pages to optimize performance:
+
+- **Default page size**: 100 rows
+- **Page size options**: 50, 100, 200, 500 rows per page
+- **Navigation**: Previous, Next, First, Last page buttons
+- **Page counter**: Shows current page and total pages
+
+Change the page size using the dropdown in the toolbar.
+
+## Table schema
+
+View the table's structure by clicking the **Schema** tab or button:
+
+### Column information
+
+For each column, the schema shows:
+
+- **Column name**: The column identifier
+- **Data type**: PostgreSQL data type (varchar, integer, timestamp, etc.)
+- **Nullable**: Whether the column accepts NULL values
+- **Default value**: Default value for new rows
+- **Primary key**: Whether this column is part of the primary key
+
+### Indexes
+
+View all indexes on the table:
+
+- **Index name**: Unique identifier for the index
+- **Columns**: Which columns are included
+- **Type**: Index type (btree, hash, gin, gist)
+- **Unique**: Whether the index enforces uniqueness
+
+### Constraints
+
+See all table constraints:
+
+- **Primary keys**: Unique row identifiers
+- **Foreign keys**: References to other tables
+- **Unique constraints**: Enforce unique values
+- **Check constraints**: Validation rules
+
+## Editing data
+
+<Warning>
+Inline editing is available but requires careful use. Always ensure you're editing the correct table and row before making changes.
+</Warning>
+
+To edit a cell:
+
+1. Click the cell to select it
+2. Type the new value
+3. Press **Enter** to confirm or **Escape** to cancel
+
+Changes are saved automatically when you confirm the edit.
+
+## Adding rows
+
+Add new rows to the table:
+
+1. Click the **Add Row** button in the toolbar
+2. Fill in values for each column
+3. Click **Save** to insert the row
+
+<Info>
+Columns with default values or auto-increment (SERIAL) don't need to be filled in.
+</Info>
+
+## Deleting rows
+
+Delete one or more rows:
+
+1. Select rows using the checkboxes
+2. Click the **Delete Selected** button
+3. Confirm the deletion in the dialog
+
+<Warning>
+Row deletion is permanent and cannot be undone. Make sure you have backups before deleting important data.
+</Warning>
+
+## Exporting data
+
+Export table data in multiple formats:
+
+<Tabs>
+  <Tab title="CSV">
+    Export as comma-separated values:
+    
+    1. Click **Export** → **CSV**
+    2. Choose to include headers (recommended)
+    3. File downloads automatically
+    
+    ```csv
+    id,name,email,created_at
+    1,John Doe,john@example.com,2024-01-15 10:30:00
+    2,Jane Smith,jane@example.com,2024-01-16 14:22:00
+    ```
+  </Tab>
+  <Tab title="JSON">
+    Export as JSON array:
+    
+    1. Click **Export** → **JSON**
+    2. Choose formatting (compact or pretty-printed)
+    3. File downloads automatically
+    
+    ```json
+    [
+      {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john@example.com",
+        "created_at": "2024-01-15T10:30:00.000Z"
+      },
+      {
+        "id": 2,
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "created_at": "2024-01-16T14:22:00.000Z"
+      }
+    ]
+    ```
+  </Tab>
+  <Tab title="Excel">
+    Export as Excel spreadsheet (.xlsx):
+    
+    1. Click **Export** → **Excel**
+    2. File downloads automatically
+    3. Open in Excel, Google Sheets, or LibreOffice
+    
+    The Excel export uses the `xlsx` library (version 0.20.2) to create native .xlsx files with:
+    - Proper column headers
+    - Data type preservation
+    - Formatting support
+  </Tab>
+</Tabs>
+
+<Note>
+Large exports (>10,000 rows) may take a few seconds to generate. The browser will show a progress indicator.
+</Note>
+
+## Filtering and sorting
+
+### Sorting
+
+Click any column header to sort by that column:
+
+- **First click**: Sort ascending
+- **Second click**: Sort descending
+- **Third click**: Remove sorting
+
+The current sort is indicated by an arrow icon (↑ or ↓) next to the column name.
+
+### Filtering
+
+Filter rows by column values:
+
+1. Click the **Filter** icon in the column header
+2. Enter your filter criteria
+3. Press **Enter** to apply
+
+Filter operators:
+
+- **Equals**: Exact match
+- **Contains**: Partial match (case-insensitive)
+- **Starts with**: Value begins with text
+- **Ends with**: Value ends with text
+- **Greater than / Less than**: Numeric and date comparisons
+
+<Info>
+Multiple filters can be combined. All conditions must be met for a row to be displayed (AND logic).
+</Info>
+
+## Table operations
+
+### Rename table
+
+1. Right-click the table name in the schema tree
+2. Select **Rename**
+3. Enter the new name
+4. Click **Rename**
+
+### Edit table structure
+
+Open the table designer to modify:
+
+- Add/remove columns
+- Change column types
+- Add/remove indexes
+- Modify constraints
+
+Click **Edit Table** in the toolbar to open the designer.
+
+### Drop table
+
+<Warning>
+Dropping a table permanently deletes it and all its data. This cannot be undone.
+</Warning>
+
+1. Right-click the table name
+2. Select **Drop Table**
+3. Confirm by typing the table name
+4. Click **Drop Table**
+
+## Performance tips
+
+### Large tables
+
+For tables with millions of rows:
+
+- Use pagination instead of loading all rows
+- Apply filters to reduce the result set
+- Create indexes on frequently queried columns
+- Export in smaller batches
+
+### Virtual scrolling
+
+The virtual table component renders only visible rows, so:
+
+- Scrolling remains smooth even with large page sizes
+- Memory usage is optimized
+- Initial load time is fast
+
+## Keyboard navigation
+
+Navigate the table using keyboard shortcuts:
+
+| Action | Key |
+|--------|-----|
+| Move right | `→` or `Tab` |
+| Move left | `←` or `Shift + Tab` |
+| Move down | `↓` |
+| Move up | `↑` |
+| Edit cell | `Enter` or `F2` |
+| Cancel edit | `Escape` |
+| Save edit | `Enter` |
+| Select all | `Ctrl/Cmd + A` |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Query tool" icon="terminal" href="/features/query-tool">
+    Run custom SQL queries for advanced data operations
+  </Card>
+  <Card title="Schema explorer" icon="sitemap" href="/features/schema-explorer">
+    Explore your database structure and relationships
+  </Card>
+  <Card title="Data export" icon="download" href="/features/data-export-import">
+    Learn more about export formats and options
+  </Card>
+  <Card title="Table operations API" icon="code" href="/api/table-operations">
+    Integrate table data access in your applications
+  </Card>
+</CardGroup>

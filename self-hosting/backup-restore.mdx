@@ -1,0 +1,483 @@
+---
+title: 'Backup & Restore'
+description: 'Backup strategies, encrypted exports, and migration between Poge instances'
+---
+
+Since Poge stores all data client-side in the browser's LocalStorage, backups are essential for data protection. Poge includes built-in export/import functionality for both full data backup and settings-only backup.
+
+## Understanding Poge's Data Storage
+
+Poge stores several types of data in your browser:
+
+<CardGroup cols={2}>
+  <Card title="Database Connections" icon="database">
+    Saved PostgreSQL server connections including host, port, username, and encrypted passwords.
+  </Card>
+  <Card title="Query History" icon="clock-rotate-left">
+    Your SQL query history with timestamps and execution results.
+  </Card>
+  <Card title="Saved Notes" icon="note-sticky">
+    SQL notes and snippets you've saved for later use.
+  </Card>
+  <Card title="User Preferences" icon="gear">
+    Theme settings, UI preferences, and editor configurations.
+  </Card>
+</CardGroup>
+
+<Warning>
+Browser data is not permanent. Clearing browser data, switching browsers, or using private/incognito mode will result in data loss. Regular backups are essential.
+</Warning>
+
+## Backup Strategies
+
+### Automatic Browser Backup
+
+Some browsers sync LocalStorage across devices, but this is not reliable for critical data:
+
+- Chrome/Edge: Syncs some data when signed in
+- Firefox: Syncs data across devices
+- Safari: Uses iCloud sync on Apple devices
+
+<Note>
+Do not rely solely on browser sync. Always maintain manual backups of important connections and queries.
+</Note>
+
+### Manual Backup Frequency
+
+Recommended backup schedule:
+
+<Steps>
+  <Step title="After adding new connections">
+    Export your data immediately after adding important database connections.
+  </Step>
+  
+  <Step title="Weekly for active users">
+    If you use Poge daily, create weekly backups of your full data.
+  </Step>
+  
+  <Step title="Before browser updates">
+    Major browser updates can sometimes clear LocalStorage. Export beforehand.
+  </Step>
+  
+  <Step title="Before switching devices">
+    Export data before moving to a new computer or browser.
+  </Step>
+</Steps>
+
+## Encrypted Full Data Export
+
+Poge uses encrypted `.enc` files for full data backups, protecting sensitive connection information.
+
+### Creating an Encrypted Backup
+
+<Steps>
+  <Step title="Open Settings">
+    Click the Settings icon in the Poge interface.
+  </Step>
+  
+  <Step title="Navigate to Export">
+    Find the "Export Data" section.
+  </Step>
+  
+  <Step title="Choose encryption password">
+    Enter a strong password to encrypt your backup. This password will be required for restoration.
+    
+    <Warning>
+    **Store this password securely!** Without it, your backup cannot be decrypted. Consider using a password manager.
+    </Warning>
+  </Step>
+  
+  <Step title="Export">
+    Click "Export Full Data". A file named `poge-backup-YYYY-MM-DD.enc` will be downloaded.
+  </Step>
+</Steps>
+
+### What's Included in Full Export
+
+The encrypted export contains:
+- All database connections (including passwords)
+- Complete query history
+- Saved notes and snippets
+- User preferences and settings
+- Theme and UI customizations
+
+### Encryption Details
+
+Poge uses strong encryption for backup files:
+- **Algorithm**: AES-256-GCM (industry standard)
+- **Key derivation**: PBKDF2 with high iteration count
+- **Format**: Encrypted JSON with authentication tag
+
+## Settings-Only Export
+
+For sharing configurations without sensitive data, use settings-only export.
+
+### Creating a Settings Export
+
+<Steps>
+  <Step title="Open Settings">
+    Navigate to the Settings panel.
+  </Step>
+  
+  <Step title="Choose Settings Export">
+    Select "Export Settings Only" instead of full export.
+  </Step>
+  
+  <Step title="Download">
+    A plain JSON file `poge-settings-YYYY-MM-DD.json` will be downloaded.
+  </Step>
+</Steps>
+
+### What's Included in Settings Export
+
+The settings export contains only:
+- UI preferences
+- Theme settings
+- Editor configurations
+- Display options
+
+What's **NOT** included:
+- Database connections
+- Passwords
+- Query history
+- Personal notes
+
+<Info>
+Settings exports are plain JSON files (not encrypted) since they don't contain sensitive data. They're safe to share or version control.
+</Info>
+
+## Restoring from Backup
+
+### Restoring Encrypted Backup
+
+<Steps>
+  <Step title="Open Import">
+    Navigate to Settings → Import Data.
+  </Step>
+  
+  <Step title="Select backup file">
+    Choose your `.enc` backup file.
+  </Step>
+  
+  <Step title="Enter password">
+    Provide the encryption password you used when creating the backup.
+  </Step>
+  
+  <Step title="Choose import mode">
+    Select how to handle existing data:
+    
+    <Tabs>
+      <Tab title="Merge">
+        Combines backup data with existing data. Newer entries take precedence.
+      </Tab>
+      <Tab title="Replace">
+        Completely replaces all existing data with backup data.
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Import">
+    Click "Import" and wait for confirmation.
+  </Step>
+</Steps>
+
+<Warning>
+Using "Replace" mode will permanently delete all current data. Use "Merge" mode if you're unsure.
+</Warning>
+
+### Restoring Settings
+
+<Steps>
+  <Step title="Open Import">
+    Navigate to Settings → Import Settings.
+  </Step>
+  
+  <Step title="Select settings file">
+    Choose your `.json` settings file.
+  </Step>
+  
+  <Step title="Import">
+    Settings will be applied immediately. No password needed.
+  </Step>
+</Steps>
+
+## Migration Between Instances
+
+Moving between different Poge instances (self-hosted, Vercel, different browsers) is straightforward.
+
+### Migrating to a New Instance
+
+<Steps>
+  <Step title="Export from source">
+    On your current Poge instance:
+    1. Export full data (encrypted)
+    2. Save the `.enc` file securely
+  </Step>
+  
+  <Step title="Access new instance">
+    Open your new Poge deployment:
+    - `https://your-new-deployment.vercel.app`
+    - `https://poge.yourdomain.com`
+    - `http://localhost:3000` (self-hosted)
+  </Step>
+  
+  <Step title="Import to destination">
+    On the new instance:
+    1. Go to Settings → Import
+    2. Upload your `.enc` file
+    3. Enter decryption password
+    4. Choose "Replace" for clean migration
+  </Step>
+  
+  <Step title="Verify migration">
+    Check that all connections, history, and settings transferred correctly.
+  </Step>
+</Steps>
+
+### Cross-Browser Migration
+
+Moving data between browsers (Chrome → Firefox, Safari → Edge):
+
+<CodeGroup>
+```bash Same Computer
+1. Open Poge in Browser A
+2. Export full data → save to Downloads
+3. Open Poge in Browser B
+4. Import the saved file
+5. Verify connections work
+```
+
+```bash Different Computers
+1. Export from Computer A
+2. Transfer .enc file via:
+   - Cloud storage (Dropbox, Drive)
+   - Email to yourself
+   - USB drive
+3. Download on Computer B
+4. Import in Browser B
+```
+</CodeGroup>
+
+### Team Distribution
+
+Sharing connection templates with team members:
+
+<Steps>
+  <Step title="Create template connections">
+    Set up database connections with placeholder credentials.
+  </Step>
+  
+  <Step title="Export settings">
+    Export settings-only (not full data) to avoid sharing passwords.
+  </Step>
+  
+  <Step title="Distribute">
+    Share the `.json` file with team members via:
+    - Internal wiki
+    - Git repository (safe since no passwords)
+    - Team chat
+  </Step>
+  
+  <Step title="Team imports">
+    Each member:
+    1. Imports the settings file
+    2. Updates connections with their own credentials
+  </Step>
+</Steps>
+
+<Warning>
+**Never share encrypted backups** containing real passwords, even with team members. Each person should maintain their own credentials.
+</Warning>
+
+## Backup Storage Best Practices
+
+### Secure Storage Locations
+
+<Tabs>
+  <Tab title="Password Manager">
+    Store backup files and encryption passwords in a password manager:
+    - 1Password (supports file attachments)
+    - Bitwarden (secure notes with attachments)
+    - LastPass (secure notes)
+  </Tab>
+  
+  <Tab title="Cloud Storage">
+    Encrypted cloud storage for backup files:
+    - Dropbox
+    - Google Drive
+    - OneDrive
+    
+    <Info>
+    Since backups are already encrypted, standard cloud storage is acceptable. However, avoid storing the encryption password in the same location.
+    </Info>
+  </Tab>
+  
+  <Tab title="Local Storage">
+    Keep local copies on encrypted drives:
+    - External hard drive
+    - USB drive (encrypted)
+    - Network attached storage (NAS)
+  </Tab>
+</Tabs>
+
+### Backup File Organization
+
+Keep your backups organized:
+
+```bash
+backups/
+├── 2026-03/
+│   ├── poge-backup-2026-03-01.enc
+│   ├── poge-backup-2026-03-08.enc
+│   └── poge-backup-2026-03-15.enc
+├── 2026-02/
+│   └── poge-backup-2026-02-15.enc
+└── settings/
+    └── poge-settings-team-template.json
+```
+
+### Backup Rotation Policy
+
+Recommended retention schedule:
+- **Daily**: Keep last 7 days
+- **Weekly**: Keep last 4 weeks
+- **Monthly**: Keep last 12 months
+- **Yearly**: Keep indefinitely
+
+## Disaster Recovery
+
+### Scenario: Browser Cache Cleared
+
+<Steps>
+  <Step title="Don't panic">
+    Your backup files are safe outside the browser.
+  </Step>
+  
+  <Step title="Open Poge">
+    Navigate to your Poge instance (it will appear empty).
+  </Step>
+  
+  <Step title="Import latest backup">
+    Import your most recent `.enc` backup file.
+  </Step>
+  
+  <Step title="Resume work">
+    All connections and history are restored.
+  </Step>
+</Steps>
+
+### Scenario: Lost Encryption Password
+
+<Warning>
+Without the encryption password, backup files **cannot be decrypted**. This is by design for security.
+</Warning>
+
+If you've lost your password:
+1. Check your password manager
+2. Check secure notes or documents where you might have saved it
+3. If truly lost, the backup is unrecoverable
+4. You'll need to manually recreate connections
+
+**Prevention**: Always store encryption passwords in a password manager.
+
+### Scenario: Corrupted Backup File
+
+If a backup file is corrupted:
+1. Try an older backup file
+2. Check if you have cloud storage versions/history
+3. Use settings-only export if available (no encryption needed)
+
+## Automated Backup Scripts
+
+For power users, automate backup reminders:
+
+<CodeGroup>
+```javascript Browser Console
+// Run this in browser console to export data programmatically
+const exportData = () => {
+  const data = localStorage.getItem('poge-data')
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `poge-backup-${new Date().toISOString().split('T')[0]}.json`
+  a.click()
+}
+
+exportData()
+```
+
+```bash Shell Script
+#!/bin/bash
+# Backup reminder script - add to crontab
+# Runs weekly on Monday at 9 AM
+
+notify-send "Poge Backup Reminder" "Don't forget to export your Poge data!"
+```
+</CodeGroup>
+
+## Compliance and Data Governance
+
+For organizations with compliance requirements:
+
+### Data Retention
+
+- Backups contain database credentials and query history
+- Follow your organization's data retention policies
+- Securely delete old backups when no longer needed
+
+### GDPR Considerations
+
+If you're in the EU:
+- Backup files may contain personal data
+- Store backups in GDPR-compliant locations
+- Ensure backups are encrypted
+- Have a process for backup deletion on request
+
+## Backup Verification
+
+Regularly test your backups:
+
+<Steps>
+  <Step title="Test in private browser">
+    Open Poge in an incognito/private window.
+  </Step>
+  
+  <Step title="Import backup">
+    Import your latest backup to verify it works.
+  </Step>
+  
+  <Step title="Test connections">
+    Verify that database connections can be established.
+  </Step>
+  
+  <Step title="Check query history">
+    Ensure your query history is complete.
+  </Step>
+</Steps>
+
+<Info>
+Test your backups at least once per quarter to ensure they're valid and you remember your encryption password.
+</Info>
+
+## Migration Troubleshooting
+
+### Import fails with "Invalid password"
+
+- Double-check your password (case-sensitive)
+- Ensure you're using the `.enc` file, not `.json`
+- Verify the file wasn't corrupted during transfer
+
+### Connections don't work after import
+
+- Database credentials may have changed
+- Server IP/hostname may be different
+- Check SSL/TLS requirements for the database
+
+### Missing query history
+
+- Ensure you used "Full Export", not "Settings Only"
+- Check if you selected "Merge" instead of "Replace"
+- Verify the export date - you may have an older backup
+
+<Check>Your data is now protected with a solid backup strategy!</Check>

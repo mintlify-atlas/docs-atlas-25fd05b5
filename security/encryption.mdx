@@ -1,0 +1,410 @@
+---
+title: Encryption
+description: Technical details of AES-256-GCM encryption, key derivation, and encrypted backup format in Poge
+---
+
+## Encryption Architecture
+
+Poge uses **AES-256-GCM** (Advanced Encryption Standard with Galois/Counter Mode) for encrypting all sensitive data. This is the same encryption standard used by banks, government agencies, and enterprise applications.
+
+### Encryption Algorithm Details
+
+- **Algorithm**: AES-256-GCM
+- **Key Length**: 256 bits (32 bytes)
+- **IV Length**: 12 bytes (96 bits)
+- **Salt Length**: 16 bytes (128 bits)
+- **Key Derivation**: PBKDF2 with SHA-256
+- **KDF Iterations**: 100,000
+- **Authentication**: Built-in with GCM mode
+
+<Info>
+  AES-256-GCM provides both confidentiality (encryption) and authenticity (tamper detection). Any modification to encrypted data will be detected during decryption.
+</Info>
+
+## Key Derivation from PIN
+
+Your 6-digit PIN is never stored directly. Instead, Poge uses **PBKDF2** (Password-Based Key Derivation Function 2) to derive strong encryption keys from your PIN.
+
+### Derivation Process
+
+```typescript
+// utils/encryption.ts:9-31
+static async deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
+  const encoder = new TextEncoder()
+  const pinBuffer = encoder.encode(pin)
+
+  const baseKey = await crypto.subtle.importKey(
+    "raw", 
+    pinBuffer, 
+    "PBKDF2", 
+    false, 
+    ["deriveKey"]
+  )
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,  // 100,000 iterations
+      hash: "SHA-256",
+    },
+    baseKey,
+    {
+      name: "AES-GCM",
+      length: 256,  // 256-bit key
+    },
+    false,
+    ["encrypt", "decrypt"]
+  )
+}
+```
+
+### Why PBKDF2 with 100,000 Iterations?
+
+1. **Slows down brute force attacks**: Each PIN attempt takes significant computational time
+2. **Unique keys from the same PIN**: Different salts produce different keys
+3. **Industry standard**: PBKDF2 is approved by NIST and widely used
+
+<Warning>
+  The 100,000 iterations make each encryption/decryption operation intentionally slow (typically 50-100ms). This is a security feature, not a bug. It makes brute-forcing PINs computationally expensive.
+</Warning>
+
+## Encryption Process
+
+When data is encrypted, the following steps occur:
+
+### Step 1: Generate Random Salt and IV
+
+```typescript
+// utils/encryption.ts:33-41
+static generateSalt(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(16))
+}
+
+static generateIV(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(12))
+}
+```
+
+Each encryption operation uses:
+- **Random 16-byte salt**: Ensures the same PIN generates different keys each time
+- **Random 12-byte IV**: Prevents pattern analysis across encrypted messages
+
+### Step 2: Derive Encryption Key
+
+The PIN and salt are used to derive a 256-bit AES key via PBKDF2.
+
+### Step 3: Encrypt Data
+
+```typescript
+// utils/encryption.ts:44-74
+static async encrypt(data: string, pin: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const dataBuffer = encoder.encode(data)
+
+  const salt = this.generateSalt()
+  const iv = this.generateIV()
+  const key = await this.deriveKey(pin, salt)
+
+  const encryptedBuffer = await crypto.subtle.encrypt(
+    {
+      name: "AES-GCM",
+      iv: iv,
+    },
+    key,
+    dataBuffer
+  )
+
+  // Combine salt + iv + encrypted data
+  const combined = new Uint8Array(
+    salt.length + iv.length + encryptedBuffer.byteLength
+  )
+  combined.set(salt, 0)
+  combined.set(iv, salt.length)
+  combined.set(new Uint8Array(encryptedBuffer), salt.length + iv.length)
+
+  // Convert to base64
+  return btoa(String.fromCharCode(...combined))
+}
+```
+
+### Step 4: Store Encrypted Data
+
+The encrypted data is stored as a base64-encoded string in localStorage.
+
+## Decryption Process
+
+Decryption reverses the encryption process:
+
+```typescript
+// utils/encryption.ts:77-108
+static async decrypt(encryptedData: string, pin: string): Promise<string> {
+  // Convert from base64
+  const combined = new Uint8Array(
+    atob(encryptedData)
+      .split("")
+      .map((char) => char.charCodeAt(0))
+  )
+
+  // Extract salt, iv, and encrypted data
+  const salt = combined.slice(0, 16)  // First 16 bytes
+  const iv = combined.slice(16, 28)   // Next 12 bytes
+  const encryptedBuffer = combined.slice(28)  // Remaining bytes
+
+  const key = await this.deriveKey(pin, salt)
+
+  const decryptedBuffer = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: iv,
+    },
+    key,
+    encryptedBuffer
+  )
+
+  const decoder = new TextDecoder()
+  return decoder.decode(decryptedBuffer)
+}
+```
+
+### Decryption Failure Scenarios
+
+- **Wrong PIN**: Key derivation produces incorrect key → decryption fails
+- **Corrupted data**: GCM authentication tag verification fails
+- **Modified data**: GCM detects tampering → decryption fails
+
+<Info>
+  AES-GCM's built-in authentication ensures that any tampering with encrypted data is detected. If decryption succeeds, you can be confident the data hasn't been modified.
+</Info>
+
+## PIN Hashing and Verification
+
+Your PIN is never stored in plain text. Instead, a SHA-256 hash is stored for verification.
+
+### PIN Hash Generation
+
+```typescript
+// utils/encryption.ts:117-123
+static async hashPin(pin: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(pin)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  const hashArray = new Uint8Array(hashBuffer)
+  return btoa(String.fromCharCode(...hashArray))
+}
+```
+
+### PIN Verification
+
+```typescript
+// utils/encryption.ts:126-133
+static async verifyPin(pin: string, hash: string): Promise<boolean> {
+  try {
+    const pinHash = await this.hashPin(pin)
+    return pinHash === hash
+  } catch (error) {
+    return false
+  }
+}
+```
+
+<Warning>
+  SHA-256 is a one-way hash function. Even if an attacker obtains the PIN hash from localStorage, they cannot reverse it to get your PIN. They would need to brute-force all 1,000,000 possible 6-digit combinations.
+</Warning>
+
+## Encrypted Data Format
+
+### LocalStorage Encrypted Data Structure
+
+Each piece of encrypted data in localStorage follows this format:
+
+```
+[Base64-encoded string containing:]
+├─ Salt (16 bytes)
+├─ IV (12 bytes)
+└─ Encrypted Data (variable length) + Auth Tag (16 bytes, embedded by GCM)
+```
+
+Example of encrypted server data in localStorage:
+
+```json
+{
+  "postgres-manager-servers": "h8j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d2e3f4..."
+}
+```
+
+### Encrypted Backup Files (.enc)
+
+When you export your data (Settings → Data Management → Export All Data), Poge creates an `.enc` file with the following structure:
+
+#### Backup File Format
+
+```
+[Base64-encoded encrypted blob containing JSON:]
+{
+  "version": "1.0.0",
+  "exportDate": "2026-03-04T12:34:56.789Z",
+  "data": {
+    "servers": [...],          // Array of server configurations
+    "savedQueries": [...],     // Array of saved queries
+    "queryHistory": [...],     // Array of query executions
+    "settings": {
+      "preferences": {...},    // User preferences
+      "theme": "dark",
+      "autoLockTimeout": 300000
+    }
+  }
+}
+```
+
+#### Export Process
+
+From `components/settings.tsx:131-188`:
+
+```typescript
+const exportAllData = async () => {
+  // 1. Collect all data
+  const exportData = {
+    version: "1.0.0",
+    exportDate: new Date().toISOString(),
+    data: {
+      servers: servers,
+      savedQueries: savedQueries,
+      queryHistory: queryHistory,
+      settings: { preferences, theme, autoLockTimeout }
+    }
+  }
+
+  // 2. Encrypt with user-provided password
+  const encryptedData = await EncryptionService.encrypt(
+    JSON.stringify(exportData), 
+    exportPassword
+  )
+
+  // 3. Download as .enc file
+  const blob = new Blob([encryptedData], { type: "application/octet-stream" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `postgresql-manager-backup-${new Date().toISOString().split("T")[0]}.enc`
+  a.click()
+}
+```
+
+#### Import Process
+
+From `components/settings.tsx:190-286`:
+
+```typescript
+const importAllData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0]
+  const fileContent = await file.text()
+
+  // 1. Decrypt with user-provided password
+  const decryptedData = await EncryptionService.decrypt(fileContent, importPassword)
+  const importData = JSON.parse(decryptedData)
+
+  // 2. Validate structure
+  if (!importData.data || !importData.version) {
+    throw new Error("Invalid backup file format")
+  }
+
+  // 3. Restore all data to localStorage
+  // ... (imports servers, queries, history, settings)
+}
+```
+
+<Warning>
+  **Backup Password vs. PIN**: When exporting, you choose a separate password (not your PIN) to encrypt the backup file. This password can be different from your PIN. If you lose this password, you cannot restore the backup.
+</Warning>
+
+## Encryption Strength Analysis
+
+### Computational Complexity
+
+To brute-force a 6-digit PIN protected by PBKDF2 with 100,000 iterations:
+
+1. **Possible PINs**: 1,000,000 (000000 to 999999)
+2. **Time per attempt** (approximate): ~50ms on modern hardware
+3. **Total brute-force time**: 1,000,000 × 50ms = 50,000 seconds ≈ **13.9 hours**
+
+However, Poge implements additional protections:
+
+- **5-attempt lockout**: After 5 failed attempts, the app locks for 5 minutes
+- **Lockout effectively makes brute-force impractical** in the application
+
+### Offline Brute-Force Resistance
+
+If an attacker extracts encrypted data from localStorage:
+
+1. They still need to brute-force the PIN
+2. Each attempt requires 100,000 PBKDF2 iterations
+3. Even with powerful hardware, this is computationally expensive
+4. **Recommended mitigation**: Use strong backup passwords (not just 6-digit PINs)
+
+<Info>
+  For maximum security when exporting backups, use a **long, random password** (16+ characters) instead of a 6-digit PIN. This makes the backup file resistant to offline brute-force attacks.
+</Info>
+
+## Security Considerations
+
+### Web Crypto API Trust
+
+Poge relies on the browser's Web Crypto API implementation:
+
+- **Standardized**: W3C Web Cryptography API specification
+- **Hardware-accelerated**: Uses native crypto libraries when available
+- **Audited**: Browser implementations are regularly audited
+- **Cross-browser**: Consistent across Chrome, Firefox, Safari, Edge
+
+### Memory Security
+
+Encryption keys exist in memory only during encryption/decryption operations:
+
+- Keys are generated on-demand from PIN + salt
+- Keys are not stored in localStorage
+- Keys are automatically garbage-collected after use
+- JavaScript's memory is not protected from memory dumps (OS-level attack)
+
+<Warning>
+  **Memory Attacks**: If an attacker has OS-level access (e.g., memory dumping malware), they could potentially extract keys from browser memory while Poge is unlocked. This is a limitation of browser-based encryption.
+</Warning>
+
+### Side-Channel Attack Resistance
+
+Poge uses constant-time comparison for PIN verification to prevent timing attacks:
+
+```typescript
+// PIN hash comparison uses constant-time equality check
+const pinHash = await this.hashPin(pin)
+return pinHash === hash  // JavaScript string equality is constant-time
+```
+
+## Compliance and Standards
+
+Poge's encryption implementation follows industry standards:
+
+- **NIST SP 800-38D**: AES-GCM mode specification
+- **NIST SP 800-132**: PBKDF2 recommendations (>100,000 iterations)
+- **RFC 5084**: AES-GCM algorithm identifiers
+- **FIPS 197**: AES specification
+
+<Info>
+  While Poge uses strong encryption, it is a client-side tool designed for developer convenience, not a certified enterprise secrets management system. For regulated industries, consult your security team about acceptable use cases.
+</Info>
+
+## Best Practices for Developers
+
+If you're extending or auditing Poge's encryption:
+
+1. **Never reduce iteration count**: 100,000 iterations is the minimum recommended by NIST
+2. **Always use crypto.getRandomValues()**: Never use Math.random() for cryptographic operations
+3. **Validate GCM auth tags**: Don't ignore decryption failures
+4. **Clear sensitive data**: Zero out buffers containing plaintext after encryption
+5. **Audit dependencies**: Review any npm packages that touch encryption code
+
+## Next Steps
+
+- Learn about [session management and PIN protection](/security/session-management)
+- Review [security best practices](/security/overview#security-best-practices)
+- Understand the [threat model](/security/overview#threat-model)

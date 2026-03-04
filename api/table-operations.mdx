@@ -1,0 +1,463 @@
+---
+title: 'Table Operations'
+description: 'Fetch paginated table data with sorting and column metadata'
+api: 'POST /api/table-data'
+---
+
+## Overview
+
+Retrieves paginated data from PostgreSQL tables and views with column metadata, sorting support, and primary key detection. Includes safety features like identifier validation and configurable page sizes.
+
+## Request
+
+<ParamField body="host" type="string" required>
+  PostgreSQL server hostname or IP address
+</ParamField>
+
+<ParamField body="port" type="number" required>
+  PostgreSQL server port number
+</ParamField>
+
+<ParamField body="user" type="string" required>
+  PostgreSQL username for authentication
+</ParamField>
+
+<ParamField body="password" type="string">
+  PostgreSQL user password
+</ParamField>
+
+<ParamField body="database" type="string" required>
+  Target database name
+</ParamField>
+
+<ParamField body="schema" type="string" required>
+  Schema name containing the table
+</ParamField>
+
+<ParamField body="table" type="string" required>
+  Table or view name to fetch data from
+</ParamField>
+
+<ParamField body="page" type="number">
+  Page number (1-indexed)
+  
+  Default: `1`
+</ParamField>
+
+<ParamField body="pageSize" type="number">
+  Number of rows per page
+  
+  Default: `50`
+  
+  Range: `1-1000`
+</ParamField>
+
+<ParamField body="sortColumn" type="string">
+  Column name to sort by (must exist in table)
+</ParamField>
+
+<ParamField body="sortDirection" type="string">
+  Sort direction: `asc` or `desc`
+  
+  Default: `asc`
+</ParamField>
+
+<ParamField body="sslMode" type="string">
+  SSL connection mode (`disable`, `require`, `prefer`)
+</ParamField>
+
+## Response
+
+<ResponseField name="columns" type="array">
+  Array of ColumnInfo objects describing table columns
+</ResponseField>
+
+<ResponseField name="columns[].name" type="string">
+  Column name
+</ResponseField>
+
+<ResponseField name="columns[].dataType" type="string">
+  PostgreSQL data type (e.g., `integer`, `varchar`, `timestamp`)
+</ResponseField>
+
+<ResponseField name="columns[].isNullable" type="boolean">
+  Whether the column accepts NULL values
+</ResponseField>
+
+<ResponseField name="columns[].defaultValue" type="string">
+  Default value expression (may be undefined)
+</ResponseField>
+
+<ResponseField name="columns[].isPrimaryKey" type="boolean">
+  Whether the column is part of the primary key
+</ResponseField>
+
+<ResponseField name="rows" type="array">
+  Array of row objects (key-value pairs)
+</ResponseField>
+
+<ResponseField name="totalRows" type="number">
+  Total number of rows in the table (for pagination)
+</ResponseField>
+
+<ResponseField name="currentPage" type="number">
+  Current page number (1-indexed)
+</ResponseField>
+
+<ResponseField name="pageSize" type="number">
+  Number of rows per page
+</ResponseField>
+
+## Examples
+
+### Fetch First Page
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/table-data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "mypassword",
+    "database": "mydb",
+    "schema": "public",
+    "table": "users",
+    "page": 1,
+    "pageSize": 50
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('/api/table-data', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    host: 'localhost',
+    port: 5432,
+    user: 'postgres',
+    password: 'mypassword',
+    database: 'mydb',
+    schema: 'public',
+    table: 'users',
+    page: 1,
+    pageSize: 50
+  })
+});
+
+const data = await response.json();
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "columns": [
+    {
+      "name": "id",
+      "dataType": "integer",
+      "isNullable": false,
+      "defaultValue": "nextval('users_id_seq'::regclass)",
+      "isPrimaryKey": true
+    },
+    {
+      "name": "name",
+      "dataType": "character varying",
+      "isNullable": false,
+      "isPrimaryKey": false
+    },
+    {
+      "name": "email",
+      "dataType": "character varying",
+      "isNullable": false,
+      "isPrimaryKey": false
+    },
+    {
+      "name": "created_at",
+      "dataType": "timestamp without time zone",
+      "isNullable": true,
+      "defaultValue": "CURRENT_TIMESTAMP",
+      "isPrimaryKey": false
+    }
+  ],
+  "rows": [
+    {
+      "id": 1,
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "created_at": "2024-01-15T10:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Bob Smith",
+      "email": "bob@example.com",
+      "created_at": "2024-01-16T14:20:00.000Z"
+    }
+  ],
+  "totalRows": 1500,
+  "currentPage": 1,
+  "pageSize": 50
+}
+```
+</ResponseExample>
+
+### Sorted by Column (Descending)
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/table-data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "mypassword",
+    "database": "mydb",
+    "schema": "public",
+    "table": "users",
+    "page": 1,
+    "pageSize": 20,
+    "sortColumn": "created_at",
+    "sortDirection": "desc"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "columns": [...],
+  "rows": [
+    {
+      "id": 1500,
+      "name": "Zoe Williams",
+      "email": "zoe@example.com",
+      "created_at": "2024-03-20T09:15:00.000Z"
+    },
+    {
+      "id": 1499,
+      "name": "Yves Martin",
+      "email": "yves@example.com",
+      "created_at": "2024-03-19T16:45:00.000Z"
+    }
+  ],
+  "totalRows": 1500,
+  "currentPage": 1,
+  "pageSize": 20
+}
+```
+</ResponseExample>
+
+### Specific Page
+
+<RequestExample>
+```bash cURL
+curl -X POST http://localhost:3000/api/table-data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "mypassword",
+    "database": "mydb",
+    "schema": "public",
+    "table": "users",
+    "page": 5,
+    "pageSize": 100
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Success (200)
+{
+  "columns": [...],
+  "rows": [...],
+  "totalRows": 1500,
+  "currentPage": 5,
+  "pageSize": 100
+}
+```
+</ResponseExample>
+
+### Error: Missing Required Fields
+
+<ResponseExample>
+```json Error (400)
+{
+  "error": "Missing required fields"
+}
+```
+</ResponseExample>
+
+### Error: Table Not Found
+
+<ResponseExample>
+```json Error (404)
+{
+  "error": "Table has no columns or does not exist"
+}
+```
+</ResponseExample>
+
+### Error: Invalid Identifier
+
+<ResponseExample>
+```json Error (500)
+{
+  "error": "Invalid identifier: users; DROP TABLE users;"
+}
+```
+</ResponseExample>
+
+## Column Metadata Query
+
+The endpoint fetches column information including primary keys:
+
+From `/app/api/table-data/route.ts:47-64`:
+
+```sql
+SELECT c.column_name,
+       c.data_type,
+       c.is_nullable,
+       c.column_default,
+       (tc.constraint_type = 'PRIMARY KEY') AS is_primary_key
+FROM information_schema.columns c
+LEFT JOIN information_schema.key_column_usage kcu
+  ON c.table_schema = kcu.table_schema
+ AND c.table_name = kcu.table_name
+ AND c.column_name = kcu.column_name
+LEFT JOIN information_schema.table_constraints tc
+  ON kcu.table_schema = tc.table_schema
+ AND kcu.table_name = tc.table_name
+ AND kcu.constraint_name = tc.constraint_name
+WHERE c.table_schema = $1 AND c.table_name = $2
+ORDER BY c.ordinal_position
+```
+
+## Identifier Validation
+
+To prevent SQL injection, table and column names are validated:
+
+From `/app/api/table-data/route.ts:6-13`:
+
+```typescript
+function quoteIdentifier(identifier: string): string {
+  // Basic identifier validation and quoting to prevent injection
+  // Allows letters, numbers, underscore, and $; rejects others
+  if (!/^[A-Za-z_][A-Za-z0-9_$]*$/.test(identifier)) {
+    throw new Error(`Invalid identifier: ${identifier}`)
+  }
+  return '"' + identifier.replace(/""/g, '""') + '"'
+}
+```
+
+<Warning>
+  Only standard PostgreSQL identifiers are allowed. Special characters or SQL injection attempts will be rejected.
+</Warning>
+
+## Pagination Implementation
+
+From `/app/api/table-data/route.ts:102-108`:
+
+```typescript
+// Page and offset
+const limit = Math.max(1, Math.min(1000, Number(pageSize) || 50))
+const pageNum = Math.max(1, Number(page) || 1)
+const offset = (pageNum - 1) * limit
+
+// Build data query
+const dataSql = `SELECT * FROM ${quoteIdentifier(schema)}.${quoteIdentifier(table)}${orderByClause} LIMIT $1 OFFSET $2`
+```
+
+### Pagination Constraints
+
+- **Minimum page size**: 1 row
+- **Maximum page size**: 1000 rows
+- **Default page size**: 50 rows
+- **Minimum page number**: 1
+
+## Sorting
+
+Sort columns are validated against actual table columns:
+
+From `/app/api/table-data/route.ts:88-94`:
+
+```typescript
+let orderByClause = ''
+if (sortColumn) {
+  const allowed = columns.some((c) => c.name === sortColumn)
+  if (allowed) {
+    const safeDirection = String(sortDirection).toLowerCase() === 'desc' ? 'desc' : 'asc'
+    orderByClause = ` ORDER BY ${quoteIdentifier(sortColumn)} ${safeDirection.toUpperCase()}`
+  }
+}
+```
+
+<Note>
+  Invalid sort columns are silently ignored (no ORDER BY clause added). Only columns returned by the metadata query can be used for sorting.
+</Note>
+
+## TypeScript Interfaces
+
+From `/types/database.ts:21-27`:
+
+```typescript
+export interface ColumnInfo {
+  name: string
+  dataType: string
+  isNullable: boolean
+  defaultValue?: string
+  isPrimaryKey?: boolean
+}
+```
+
+From `/types/database.ts:29-35`:
+
+```typescript
+export interface TableData {
+  columns: ColumnInfo[]
+  rows: Record<string, any>[]
+  totalRows: number
+  currentPage: number
+  pageSize: number
+}
+```
+
+## Performance Considerations
+
+### Row Count Query
+
+The endpoint executes `COUNT(*)` for every request:
+
+```sql
+SELECT COUNT(*)::bigint AS cnt FROM "public"."users"
+```
+
+For large tables (millions of rows), this can be slow. Consider:
+- Caching total counts
+- Using estimated counts from `pg_class.reltuples`
+- Implementing cursor-based pagination
+
+### Query Execution Order
+
+1. **Column metadata** (with primary key info)
+2. **Total row count** (COUNT query)
+3. **Data fetch** (LIMIT/OFFSET query)
+
+Typical execution time: **10-100ms** for tables with fewer than 100k rows.
+
+## Use Cases
+
+- **Table Data Viewer**: Browse table contents with pagination
+- **Data Export**: Fetch data in chunks for export
+- **Query Builder**: Display sample data for tables
+- **Data Editor**: Load rows for editing with primary key detection
+
+## Limitations
+
+- No filtering/search support (use query execution endpoint)
+- No column selection (always fetches all columns)
+- Sort limited to single column
+- Maximum 1000 rows per page

@@ -1,0 +1,124 @@
+---
+title: 'API Overview'
+description: 'Introduction to Poge API endpoints for PostgreSQL operations'
+---
+
+## Introduction
+
+Poge provides a Next.js API backend for PostgreSQL database operations. The API handles query execution, connection management, schema exploration, and statistics tracking.
+
+## Base URL
+
+All API endpoints are relative to your Poge deployment:
+
+```
+http://localhost:3000/api
+```
+
+## Authentication
+
+Poge uses **client-side authentication** with no server-side auth required. Database credentials are passed directly in API requests and used to establish connections via PostgreSQL connection pooling.
+
+<Warning>
+  All database credentials (host, port, user, password) must be included in each request. These are not stored server-side.
+</Warning>
+
+## Request Format
+
+All POST endpoints accept JSON payloads with the following structure:
+
+```json
+{
+  "host": "localhost",
+  "port": 5432,
+  "user": "postgres",
+  "password": "your_password",
+  "database": "mydb",
+  "sslMode": "disable"
+}
+```
+
+### SSL Mode Options
+
+<ParamField path="sslMode" type="string">
+  SSL connection mode. Options:
+  - `disable` - No SSL (default)
+  - `require` - Require SSL with self-signed certificates allowed
+  - `prefer` - Try SSL first, fallback to non-SSL
+</ParamField>
+
+## Response Format
+
+### Success Response
+
+Successful responses return JSON with appropriate status codes (200, 201):
+
+```json
+{
+  "data": {},
+  "executionTime": 45
+}
+```
+
+### Error Response
+
+Error responses include detailed error information:
+
+```json
+{
+  "error": "Connection refused",
+  "details": "Unable to connect to the database server. Please check if the server is running and the host/port are correct.",
+  "code": "ECONNREFUSED"
+}
+```
+
+### Common Error Codes
+
+| Code | Description |
+|------|-------------|
+| `ECONNREFUSED` | Database server is not reachable |
+| `ENOTFOUND` | Hostname cannot be resolved |
+| `28P01` | Authentication failed (invalid credentials) |
+| `3D000` | Database does not exist |
+| `28000` | User lacks database permissions |
+| `ECONNRESET` | Connection reset (often SSL misconfiguration) |
+
+## Rate Limiting
+
+No rate limiting is enforced. Connection pooling handles concurrent requests efficiently.
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Test Connection" icon="plug" href="/api/test-connection">
+    Verify database credentials and connectivity
+  </Card>
+  <Card title="Query Execution" icon="terminal" href="/api/query-execution">
+    Execute SQL queries with transaction support
+  </Card>
+  <Card title="Schema Operations" icon="database" href="/api/schema-operations">
+    Retrieve database schema tree structure
+  </Card>
+  <Card title="Table Operations" icon="table" href="/api/table-operations">
+    Fetch paginated table data with sorting
+  </Card>
+  <Card title="Statistics" icon="chart-line" href="/api/statistics">
+    Connection pool and query cache statistics
+  </Card>
+</CardGroup>
+
+## Connection Pooling
+
+Poge uses PostgreSQL connection pooling to optimize performance. Each unique connection configuration (host, port, user, database) maintains a separate pool.
+
+### Pool Configuration
+
+- **Max clients per pool:** 10
+- **Idle timeout:** 30 seconds
+- **Connection timeout:** 5 seconds
+
+See [Pool Statistics](/api/statistics#pool-statistics) for monitoring active connections.
+
+## Query Caching
+
+Read-only SELECT queries are automatically cached to improve performance. See [Cache Statistics](/api/statistics#cache-statistics) for details.

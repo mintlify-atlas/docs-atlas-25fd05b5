@@ -1,97 +1,185 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to Poge"
+description: "A lightweight PostgreSQL database tool for developers who just want to check their tables, run queries, and get back to work"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#0cac45] via-[#1E8E3E] to-[#15803D] dark:from-[#0cac45] dark:via-[#1E8E3E] dark:to-[#15803D] py-20">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          PostgreSQL management, simplified
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-8">
+          Skip the heavy tools. Open, connect, and start exploring your database in seconds with an intuitive UI that gets out of your way.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#0cac45] font-semibold hover:bg-gray-100 transition-colors no-underline"
+          >
+            Get Started
+          </a>
+          <a 
+            href="/introduction" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors no-underline"
+          >
+            Learn More
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 flex justify-center">
+        <div className="relative w-full max-w-md">
+          <div className="absolute inset-0 bg-white/10 rounded-2xl blur-3xl"></div>
+          <div className="relative bg-white/95 dark:bg-[#1a1d27] rounded-2xl p-6 shadow-2xl border border-white/20 dark:border-[#27272a]">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <div className="space-y-2 font-mono text-sm">
+              <div className="text-gray-600 dark:text-gray-400">SELECT * FROM users</div>
+              <div className="text-gray-600 dark:text-gray-400">WHERE active = true</div>
+              <div className="text-gray-600 dark:text-gray-400">LIMIT 10;</div>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#27272a]">
+                <div className="text-[#0cac45] font-semibold">10 rows returned</div>
+                <div className="text-gray-500 dark:text-gray-500 text-xs">Executed in 23ms</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Quick start</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Get up and running with Poge in three simple steps</p>
+  
+  <Steps>
+    <Step title="Open Poge">
+      Visit [poge.dev](https://poge.dev) in your browser or deploy your own instance on Vercel. No installation required.
+    </Step>
+    <Step title="Connect your database">
+      Click **Add Server** and enter your PostgreSQL connection details:
+      
+      ```bash
+      Host: your-database-host.com
+      Port: 5432
+      Database: your_database
+      Username: your_username
+      Password: your_password
+      ```
+      
+      <Note>All connection details are stored locally in your browser. Nothing is sent to external servers.</Note>
+    </Step>
+    <Step title="Start exploring">
+      Browse tables, run SQL queries, and manage your data through the intuitive interface. Your query history and notes are automatically saved.
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Explore by feature</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Everything you need to manage your PostgreSQL databases</p>
+  
+  <CardGroup cols={2}>
+    <Card title="Query Tool" icon="terminal" href="/features/query-tool">
+      Write and execute SQL queries with syntax highlighting, multi-statement support, and automatic query history.
+    </Card>
+    <Card title="Table Viewer" icon="table" href="/features/table-viewer">
+      Browse table data with pagination, inline editing, and export to CSV, JSON, or Excel formats.
+    </Card>
+    <Card title="Schema Explorer" icon="sitemap" href="/features/schema-explorer">
+      Navigate your database structure with an interactive tree view of databases, schemas, tables, and views.
+    </Card>
+    <Card title="Security & Encryption" icon="shield" href="/security/overview">
+      AES-256 encryption, PIN protection, and session management keep your data secure.
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Why developers love Poge</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Built for speed and simplicity</p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="bg-gray-50 dark:bg-[#1a1d27] rounded-xl p-6 border border-gray-200 dark:border-[#27272a]">
+      <div className="w-12 h-12 bg-[#0cac45]/10 dark:bg-[#0cac45]/20 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#0cac45]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Blazing fast</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Connection pooling, query caching, and optimized execution deliver instant results.
+      </p>
+    </div>
+    
+    <div className="bg-gray-50 dark:bg-[#1a1d27] rounded-xl p-6 border border-gray-200 dark:border-[#27272a]">
+      <div className="w-12 h-12 bg-[#0cac45]/10 dark:bg-[#0cac45]/20 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#0cac45]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Privacy first</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        All data stays in your browser. Self-host for complete control over your infrastructure.
+      </p>
+    </div>
+    
+    <div className="bg-gray-50 dark:bg-[#1a1d27] rounded-xl p-6 border border-gray-200 dark:border-[#27272a]">
+      <div className="w-12 h-12 bg-[#0cac45]/10 dark:bg-[#0cac45]/20 rounded-lg flex items-center justify-center mb-4">
+        <svg className="w-6 h-6 text-[#0cac45]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Beautiful UX</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Thoughtfully designed interface with keyboard shortcuts and dark mode support.
+      </p>
+    </div>
+  </div>
+</div>
 
-Design a docs site that looks great and empowers your users.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Resources</h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">Learn more about Poge and get help</p>
+  
+  <CardGroup cols={3}>
+    <Card title="Self-Hosting Guide" icon="server" href="/self-hosting/deployment">
+      Deploy your own instance on Vercel or any Node.js hosting platform
+    </Card>
+    <Card title="API Reference" icon="code" href="/api/introduction">
+      Integrate Poge's backend API into your own applications
+    </Card>
+    <Card title="Keyboard Shortcuts" icon="keyboard" href="/resources/keyboard-shortcuts">
+      Master Poge with essential keyboard shortcuts for faster workflows
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="bg-gradient-to-r from-[#0cac45] to-[#1E8E3E] dark:from-[#0cac45] dark:to-[#1E8E3E] rounded-2xl p-8 lg:p-12 text-center">
+    <h2 className="text-3xl font-bold text-white mb-4">Ready to get started?</h2>
+    <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
+      Try Poge today and experience a faster, simpler way to manage your PostgreSQL databases.
+    </p>
+    <div className="flex flex-wrap justify-center gap-4">
+      <a 
+        href="/quickstart" 
+        className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#0cac45] font-semibold hover:bg-gray-100 transition-colors no-underline"
+      >
+        Get Started
+      </a>
+      <a 
+        href="https://github.com/dev-hari-prasad/poge" 
+        className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors no-underline"
+      >
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>

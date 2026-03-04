@@ -1,0 +1,58 @@
+---
+title: Introduction
+description: A lightweight PostgreSQL database management tool that runs entirely in your browser with a local-first architecture
+---
+
+## What is Poge?
+
+Poge is your quick database tool — for those moments when you just need to peek at tables, run a few queries, and get back to building awesome stuff. Skip the heavy tools (pgAdmin, DBeaver), skip the wait. Just open, connect, and you're off.
+
+## Key Features
+
+### Blazing-Fast Query Editor
+A powerful SQL editor built for speed with syntax highlighting, multi-tab support, and instant query execution.
+
+### Local-First Architecture
+All your data lives on your machine. Poge runs entirely in your browser using local storage — no servers, no data transmission.
+
+### AES-256 Encryption
+Your database credentials and sensitive data are protected with AES-256-GCM encryption. Every connection is secured with a 6-digit PIN you control.
+
+### Table & Schema Viewer
+Navigate tables, inspect schemas, and explore relationships with an intuitive interface designed for developers.
+
+### Export & Import
+Full data export/import using encrypted `.enc` files, or settings-only export/import with plain `.json` files. Pick up where you left off on any device.
+
+### Query History & Templates
+Automatically save query history and create reusable templates for common operations.
+
+## Who Is Poge For?
+
+Poge is designed for developers who need quick access to their PostgreSQL databases without the overhead of traditional database management tools:
+
+- **Full-stack developers** checking database state during development
+- **DevOps engineers** running quick diagnostic queries
+- **Data analysts** exploring database schemas and relationships
+- **Anyone** who values speed, privacy, and simplicity
+
+<Info>
+Poge is built with Next.js, React, and the `pg` library. It's open-source and MIT licensed.
+</Info>
+
+## Privacy & Security
+
+Your privacy is paramount:
+
+- **No data transmission**: Everything stays in your browser's local storage
+- **AES-256-GCM encryption**: Military-grade encryption for your credentials
+- **100,000 PBKDF2 iterations**: Your 6-digit PIN is hardened against brute force
+- **Client-side only**: No backend servers, no databases, no tracking
+
+<Note>
+Your 6-digit PIN creates 1,000,000 possible combinations, multiplied by 100,000 iterations. Breaking this encryption would take longer than the universe's age.
+</Note>
+
+## Getting Started
+
+Ready to start managing your PostgreSQL databases? Head over to the [Quickstart](/quickstart) guide to set up Poge in minutes.

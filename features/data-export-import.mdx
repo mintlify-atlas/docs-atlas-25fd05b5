@@ -1,0 +1,347 @@
+---
+title: Data export and import
+description: Export table data to CSV, JSON, or Excel formats, and import data with encrypted backups
+---
+
+Poge provides flexible export and import options for your database data, connection settings, and application state.
+
+## Exporting table data
+
+Export data from any table or query result in multiple formats.
+
+### CSV export
+
+Comma-separated values format, compatible with Excel, Google Sheets, and most data tools.
+
+**From table viewer:**
+1. Open a table
+2. Click **Export** → **CSV**
+3. Choose options:
+   - Include headers (recommended)
+   - Delimiter (comma, semicolon, tab)
+   - Quote character
+4. File downloads automatically
+
+**Example CSV:**
+```csv
+id,name,email,created_at,status
+1,John Doe,john@example.com,2024-01-15 10:30:00,active
+2,Jane Smith,jane@example.com,2024-01-16 14:22:00,active
+3,Bob Johnson,bob@example.com,2024-01-17 09:15:00,inactive
+```
+
+<Info>
+CSV exports handle special characters, commas, and line breaks correctly by using quotes.
+</Info>
+
+### JSON export
+
+JSON array format, ideal for APIs and data processing.
+
+**From table viewer:**
+1. Open a table
+2. Click **Export** → **JSON**
+3. Choose formatting:
+   - **Compact**: Minimal whitespace
+   - **Pretty**: Indented and readable
+4. File downloads automatically
+
+**Example JSON (pretty):**
+```json
+[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "created_at": "2024-01-15T10:30:00.000Z",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "created_at": "2024-01-16T14:22:00.000Z",
+    "status": "active"
+  }
+]
+```
+
+### Excel export
+
+Native Excel .xlsx format with proper formatting and data types.
+
+**From table viewer:**
+1. Open a table
+2. Click **Export** → **Excel**
+3. File downloads automatically as .xlsx
+
+The Excel export uses the `xlsx` library (version 0.20.2) and includes:
+
+- Column headers in bold
+- Proper data types (numbers, dates, booleans)
+- Auto-sized columns
+- Frozen header row
+
+<Note>
+Large Excel exports (>50,000 rows) may take 10-30 seconds to generate.
+</Note>
+
+### Query result export
+
+Export results from any SQL query:
+
+1. Run your query in the Query Tool
+2. Click **Export** in the results panel
+3. Choose format (CSV, JSON, or Excel)
+4. File downloads automatically
+
+This is useful for:
+
+- Exporting filtered data
+- Custom queries with JOINs
+- Aggregated results
+- Complex WHERE clauses
+
+## Encrypted backups
+
+Poge's backup system (`components/backup-restore.tsx`) creates encrypted archives of your data and settings.
+
+### What's backed up
+
+Full backups include:
+
+- **Server connections**: Host, port, database, credentials
+- **Saved queries**: All your saved SQL queries
+- **Query history**: Recent query executions
+- **Notes**: All notes and scratch pad content
+- **Settings**: Application preferences
+- **UI state**: Window layouts, selected tabs
+
+### Creating encrypted backups
+
+1. Go to **Settings** → **Backup & Restore**
+2. Click **Create Backup**
+3. Choose backup type:
+   - **Full backup** (.enc): Everything with encryption
+   - **Settings only** (.json): No sensitive data
+4. Enter encryption password (for full backup)
+5. Click **Create Backup**
+6. Save the .enc or .json file
+
+**Encryption details:**
+
+- **Algorithm**: AES-256-GCM
+- **Key derivation**: PBKDF2 with 100,000 iterations
+- **Salt**: Random 32-byte salt per backup
+- **Authentication**: Built-in with GCM mode
+
+See [Encryption](/security/encryption) for technical details.
+
+<Warning>
+Choose a strong encryption password and store it securely. If you forget it, your backup cannot be recovered.
+</Warning>
+
+### Backup file structure
+
+Encrypted backup (.enc) format:
+
+```json
+{
+  "version": "1.0",
+  "encrypted": true,
+  "algorithm": "AES-256-GCM",
+  "salt": "<base64-encoded-salt>",
+  "iv": "<base64-encoded-iv>",
+  "data": "<encrypted-payload>",
+  "created": "2024-03-15T10:30:00.000Z"
+}
+```
+
+Settings backup (.json) format:
+
+```json
+{
+  "version": "1.0",
+  "encrypted": false,
+  "settings": {
+    "theme": "dark",
+    "autoLockTimeout": 30,
+    "queryHistoryLimit": 100
+  },
+  "created": "2024-03-15T10:30:00.000Z"
+}
+```
+
+## Restoring backups
+
+Restore from a backup file:
+
+1. Go to **Settings** → **Backup & Restore**
+2. Click **Restore from Backup**
+3. Select your .enc or .json file
+4. Enter decryption password (for .enc files)
+5. Choose what to restore:
+   - ☑ Server connections
+   - ☑ Saved queries
+   - ☑ Query history
+   - ☑ Notes
+   - ☑ Settings
+6. Click **Restore**
+
+<Info>
+Restoring doesn't delete existing data. It merges with current data, with the backup taking precedence for conflicts.
+</Info>
+
+### Restore strategies
+
+**Selective restore:**
+Uncheck items you don't want to restore. Useful when:
+
+- Moving between computers but keeping local settings
+- Sharing connection configs without history
+- Recovering just your saved queries
+
+**Merge vs. replace:**
+
+- **Merge** (default): Combines backup with existing data
+- **Replace**: Clears existing data first, then restores
+
+Choose "Replace" for a clean slate or to fix corruption.
+
+## Migration scenarios
+
+### Moving to a new computer
+
+1. On old computer:
+   - Create full encrypted backup
+   - Save to cloud storage or USB drive
+2. On new computer:
+   - Open Poge
+   - Complete first-time setup
+   - Restore from backup
+
+### Sharing connection templates
+
+Share server connections with your team:
+
+1. Create settings-only backup (.json)
+2. Share the JSON file (no encryption needed)
+3. Team imports the file
+4. Each person enters their own passwords
+
+<Warning>
+Settings-only backups don't include passwords. Each user must add their own credentials after import.
+</Warning>
+
+### Browser migration
+
+Switching browsers or clearing browser data:
+
+1. Create full backup before switching
+2. Open Poge in new browser
+3. Restore from backup
+4. All data and settings return
+
+## Importing data into tables
+
+Import CSV or JSON data into existing tables:
+
+1. Open the target table in Table Viewer
+2. Click **Import Data**
+3. Select your CSV or JSON file
+4. Map columns:
+   - Match source columns to table columns
+   - Choose default values for missing columns
+   - Skip columns you don't want to import
+5. Choose import mode:
+   - **Insert**: Add new rows
+   - **Upsert**: Update existing rows or insert new ones
+   - **Replace**: Clear table first, then insert
+6. Click **Import**
+
+<Warning>
+"Replace" mode deletes all existing data before importing. Use with caution and create a backup first.
+</Warning>
+
+### Import validation
+
+Poge validates imported data:
+
+- **Data types**: Ensures values match column types
+- **Constraints**: Checks primary keys, foreign keys, and unique constraints
+- **Required fields**: Verifies NOT NULL columns have values
+- **Formatting**: Parses dates, numbers, and booleans
+
+If validation fails, you'll see specific error messages.
+
+## Large data exports
+
+For tables with millions of rows:
+
+### Chunked exports
+
+1. Use query filters to export in batches:
+
+```sql
+-- Export users created in January
+SELECT * FROM users 
+WHERE created_at >= '2024-01-01' 
+  AND created_at < '2024-02-01';
+```
+
+2. Export each month separately
+3. Combine files later if needed
+
+### Streaming exports
+
+For extremely large tables (10M+ rows), use PostgreSQL's COPY command:
+
+```sql
+COPY (SELECT * FROM large_table) 
+TO '/tmp/export.csv' 
+WITH (FORMAT CSV, HEADER);
+```
+
+This exports directly on the database server, bypassing Poge's memory limits.
+
+## Automation
+
+Automate backups using browser automation tools:
+
+```javascript
+// Example using Puppeteer
+const puppeteer = require('puppeteer');
+
+(async () => {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  
+  await page.goto('https://poge.dev');
+  // Navigate to Settings → Backup & Restore
+  // Click Create Backup
+  // Handle download
+  
+  await browser.close();
+})();
+```
+
+<Info>
+Automated backups are useful for daily exports or CI/CD pipelines.
+</Info>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Encryption details" icon="lock" href="/security/encryption">
+    Learn how backup encryption works
+  </Card>
+  <Card title="Backup strategies" icon="shield" href="/self-hosting/backup-restore">
+    Best practices for backing up your data
+  </Card>
+  <Card title="Table viewer" icon="table" href="/features/table-viewer">
+    View and manage your table data
+  </Card>
+  <Card title="Query tool" icon="terminal" href="/features/query-tool">
+    Export custom query results
+  </Card>
+</CardGroup>

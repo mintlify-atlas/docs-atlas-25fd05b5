@@ -1,0 +1,411 @@
+---
+title: 'Configuration'
+description: 'Configure your Poge instance, Next.js settings, and SSL/TLS for database connections'
+---
+
+Poge is designed to be zero-configuration out of the box, with all user data stored client-side. However, there are several configuration options available for customization and optimization.
+
+## Environment Variables
+
+Poge does not require any environment variables for basic operation since it's a stateless application. However, you may want to configure these optional variables:
+
+### Port Configuration
+
+```bash .env.local
+# Port for the Next.js server (default: 3000)
+PORT=3000
+
+# Node environment
+NODE_ENV=production
+```
+
+### Analytics (Optional)
+
+If you want to track usage with Vercel Analytics:
+
+```bash .env.local
+# Vercel Analytics is automatically enabled on Vercel deployments
+# No additional configuration needed
+```
+
+The application includes `@vercel/analytics` (version ^1.6.1) which automatically activates when deployed to Vercel.
+
+### Custom Hostname
+
+```bash .env.local
+# Hostname for the server (default: 0.0.0.0)
+HOSTNAME=0.0.0.0
+```
+
+<Note>
+Unlike traditional database applications, Poge doesn't require database connection strings, API keys, or secrets in environment variables. All database connections are configured through the UI and stored in the browser.
+</Note>
+
+## Next.js Configuration
+
+The `next.config.mjs` file contains build and runtime configuration for Poge:
+
+```javascript next.config.mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
+}
+
+export default nextConfig
+```
+
+### Configuration Options Explained
+
+#### ESLint Settings
+
+```javascript
+eslint: {
+  ignoreDuringBuilds: true,
+}
+```
+
+ESLint checks are skipped during the build process to speed up deployments. This is useful for rapid development but you may want to enable it for production:
+
+```javascript
+eslint: {
+  ignoreDuringBuilds: false,
+}
+```
+
+#### TypeScript Settings
+
+```javascript
+typescript: {
+  ignoreBuildErrors: true,
+}
+```
+
+TypeScript type checking is disabled during builds. To enable strict type checking:
+
+```javascript
+typescript: {
+  ignoreBuildErrors: false,
+}
+```
+
+#### Image Optimization
+
+```javascript
+images: {
+  unoptimized: true,
+}
+```
+
+Image optimization is disabled to reduce build complexity and server requirements. This is suitable for most Poge deployments since the application uses minimal images.
+
+### Custom Domain Configuration
+
+If you're hosting on a custom domain, no additional Next.js configuration is needed. Simply point your DNS to your deployment:
+
+```javascript
+const nextConfig = {
+  // ... existing config
+  // No assetPrefix or basePath needed for custom domains
+}
+```
+
+### Output Configuration (for Docker)
+
+For Docker deployments using standalone output:
+
+```javascript
+const nextConfig = {
+  // ... existing config
+  output: 'standalone', // Generates a minimal Docker image
+}
+```
+
+## Vercel Configuration
+
+The `vercel.json` file configures deployment on Vercel:
+
+```json vercel.json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
+```
+
+This configuration:
+- Uses Vercel's Next.js builder (`@vercel/next`)
+- Routes all requests through Next.js for proper handling of dynamic routes
+
+### Custom Vercel Settings
+
+You can extend `vercel.json` with additional settings:
+
+<CodeGroup>
+```json Headers
+{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
+}
+```
+
+```json Redirects
+{
+  "version": 2,
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
+    }
+  ]
+}
+```
+</CodeGroup>
+
+## SSL/TLS Configuration for Database Connections
+
+Poge supports SSL/TLS connections to PostgreSQL databases. The SSL mode is configured per-connection through the UI.
+
+### SSL Modes
+
+When connecting to a database, users can choose from these SSL modes:
+
+<CardGroup cols={2}>
+  <Card title="Disable" icon="xmark">
+    No SSL encryption. Use only for local databases or trusted networks.
+  </Card>
+  <Card title="Require" icon="lock">
+    Requires SSL but doesn't verify the server certificate. Suitable for most cloud databases.
+  </Card>
+</CardGroup>
+
+### SSL Implementation
+
+The SSL configuration is handled in the API routes at `app/api/test-connection/route.ts:21`:
+
+```typescript
+const client = new Client({
+  host,
+  port,
+  user,
+  password,
+  database: database || 'postgres',
+  ssl: sslMode === "require" ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 5000,
+})
+```
+
+### SSL Certificate Verification
+
+By default, Poge uses `rejectUnauthorized: false` for SSL connections. This allows connections to databases with self-signed certificates.
+
+<Warning>
+For maximum security in production environments, use databases with proper SSL certificates from trusted Certificate Authorities (CAs).
+</Warning>
+
+### Cloud Provider SSL Requirements
+
+Many cloud database providers require or recommend SSL:
+
+<Tabs>
+  <Tab title="AWS RDS">
+    AWS RDS PostgreSQL databases support SSL connections. Download the RDS CA certificate if you need strict verification:
+    
+    - Set SSL mode to "Require" in Poge
+    - RDS automatically provides SSL certificates
+    - Connection string: Use the RDS endpoint provided in the AWS console
+  </Tab>
+  
+  <Tab title="Google Cloud SQL">
+    Cloud SQL requires SSL for external connections:
+    
+    - Enable Cloud SQL Admin API
+    - Set SSL mode to "Require" in Poge
+    - Use the public IP address provided by Cloud SQL
+  </Tab>
+  
+  <Tab title="Azure Database">
+    Azure Database for PostgreSQL enforces SSL by default:
+    
+    - Set SSL mode to "Require" in Poge
+    - Use the server name ending in `.postgres.database.azure.com`
+    - SSL is automatically configured
+  </Tab>
+  
+  <Tab title="DigitalOcean">
+    DigitalOcean Managed Databases require SSL:
+    
+    - Set SSL mode to "Require" in Poge
+    - Use the connection details from the DigitalOcean dashboard
+    - SSL mode is enforced by default
+  </Tab>
+</Tabs>
+
+## Connection Pooling
+
+Poge uses connection pooling for efficient database connections. The pool configuration is managed automatically in `lib/db-pool.ts`:
+
+### Pool Settings
+
+Default pool configuration:
+- **Max clients**: 10 per connection
+- **Idle timeout**: 30 seconds
+- **Connection timeout**: 5 seconds (configurable in route handlers)
+
+### Monitoring Connection Pools
+
+Connection pool statistics are available via the API:
+
+```bash
+# Get pool statistics
+curl http://localhost:3000/api/stats/pools
+
+# Get cache statistics
+curl http://localhost:3000/api/stats/cache
+```
+
+<Note>
+Connection pooling happens server-side in the Next.js API routes, not in the browser. This ensures efficient resource usage even with multiple concurrent users.
+</Note>
+
+## Security Configuration
+
+### CORS (Cross-Origin Resource Sharing)
+
+If you need to access Poge from multiple domains, configure CORS in `next.config.mjs`:
+
+```javascript
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type' },
+        ],
+      },
+    ]
+  },
+}
+```
+
+<Warning>
+Using `Access-Control-Allow-Origin: *` is not recommended for production. Specify exact domains instead.
+</Warning>
+
+### Content Security Policy
+
+Add a Content Security Policy for enhanced security:
+
+```javascript
+const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline';"
+          },
+        ],
+      },
+    ]
+  },
+}
+```
+
+## Performance Optimization
+
+### Build Performance
+
+Optimize build times with these settings:
+
+```javascript next.config.mjs
+const nextConfig = {
+  // ... existing config
+  swcMinify: true, // Use SWC for faster minification
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production', // Remove console logs in production
+  },
+}
+```
+
+### Bundle Analysis
+
+Analyze your bundle size:
+
+```bash
+npm install -D @next/bundle-analyzer
+```
+
+```javascript next.config.mjs
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
+module.exports = withBundleAnalyzer(nextConfig)
+```
+
+Run with: `ANALYZE=true npm run build`
+
+## Logging Configuration
+
+Configure application logging for debugging:
+
+```javascript next.config.mjs
+const nextConfig = {
+  // ... existing config
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+}
+```
+
+## Runtime Configuration
+
+Access runtime configuration in your components:
+
+```typescript
+// Read runtime config
+const port = process.env.PORT || 3000
+const nodeEnv = process.env.NODE_ENV
+```
+
+<Check>Configuration complete! Your Poge instance is ready to handle database connections.</Check>

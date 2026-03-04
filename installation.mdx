@@ -1,0 +1,199 @@
+---
+title: Installation
+description: Deploy Poge to Vercel, use the hosted version, or run it locally
+---
+
+Poge offers multiple deployment options to fit your workflow. Choose the option that works best for you.
+
+## Hosted Version
+
+The easiest way to use Poge is via the hosted version at **[poge.dev](https://poge.dev)**.
+
+<Info>
+The hosted version runs entirely in your browser. Your data never leaves your machine — it's stored locally using browser storage and encrypted with AES-256.
+</Info>
+
+### Benefits
+- No installation or setup required
+- Always up-to-date with the latest features
+- Works on any device with a modern browser
+- Zero maintenance
+
+Simply visit [https://poge.dev](https://poge.dev) and start managing your databases.
+
+## Deploy to Vercel
+
+Deploy your own instance of Poge to Vercel with one click:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fpoge&project-name=poge&repository-name=poge)
+
+<Steps>
+  <Step title="Click the Deploy Button">
+    Click the "Deploy with Vercel" button above to start the deployment process.
+  </Step>
+
+  <Step title="Authorize Vercel">
+    If you're not already logged in, sign in to your Vercel account (or create one for free).
+  </Step>
+
+  <Step title="Configure Your Project">
+    Vercel will automatically:
+    - Clone the Poge repository to your GitHub account
+    - Create a new project
+    - Deploy the application
+    
+    You can customize the project name if desired.
+  </Step>
+
+  <Step title="Access Your Instance">
+    Once deployment completes, Vercel will provide you with a URL (e.g., `your-poge.vercel.app`).
+    
+    Your personal Poge instance is now live!
+  </Step>
+</Steps>
+
+### Why Deploy Your Own?
+
+- **Custom domain**: Use your own domain name
+- **Full control**: Manage updates and customizations
+- **Team sharing**: Share a private instance with your team
+- **Additional privacy**: Keep everything under your control
+
+<Note>
+Even with your own deployment, all data stays in the browser's local storage. Vercel only hosts the static Next.js application.
+</Note>
+
+## Run Locally
+
+For development or offline use, run Poge on your local machine.
+
+### Prerequisites
+
+- **Node.js**: Version 18 or higher
+- **Package Manager**: npm, pnpm, or yarn
+
+### Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/dev-hari-prasad/poge.git
+    cd poge
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Choose your preferred package manager:
+
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
+
+    ```bash pnpm
+    pnpm install
+    ```
+
+    ```bash yarn
+    yarn
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Start the Development Server">
+    <CodeGroup>
+    ```bash npm
+    npm run dev
+    ```
+
+    ```bash pnpm
+    pnpm run dev
+    ```
+
+    ```bash yarn
+    yarn dev
+    ```
+    </CodeGroup>
+
+    The application will start on [http://localhost:3000](http://localhost:3000).
+  </Step>
+
+  <Step title="Open in Browser">
+    Navigate to [http://localhost:3000](http://localhost:3000) to access Poge.
+  </Step>
+</Steps>
+
+### Build for Production
+
+To create an optimized production build:
+
+<CodeGroup>
+```bash npm
+npm run build
+npm run start
+```
+
+```bash pnpm
+pnpm run build
+pnpm run start
+```
+
+```bash yarn
+yarn build
+yarn start
+```
+</CodeGroup>
+
+The production server will start on [http://localhost:3000](http://localhost:3000).
+
+## Technology Stack
+
+Poge is built with modern web technologies:
+
+- **Framework**: Next.js 16 (App Router)
+- **UI Library**: React 19
+- **Database Client**: node-postgres (`pg`)
+- **Styling**: Tailwind CSS + Radix UI
+- **Encryption**: Web Crypto API (AES-256-GCM)
+- **Storage**: Browser LocalStorage
+
+<Info>
+The complete dependency list is available in [`package.json`](https://github.com/dev-hari-prasad/poge/blob/main/package.json).
+</Info>
+
+## Configuration
+
+Poge uses a **local-first architecture** with zero backend configuration required. All settings are stored client-side in the browser:
+
+### Storage Keys
+
+```typescript
+// Server connections (encrypted)
+localStorage.getItem('postgres-manager-servers')
+
+// Saved queries
+localStorage.getItem('postgres-manager-saved-queries')
+
+// Query history
+localStorage.getItem('postgres-manager-query-history')
+
+// User settings (theme, preferences)
+localStorage.getItem('postgres-manager-settings')
+```
+
+### Backup & Restore
+
+Poge includes built-in export/import functionality:
+
+- **Full backup**: Exports all data as an encrypted `.enc` file
+- **Settings only**: Exports preferences as a plain `.json` file
+
+Access these options from **Settings → Export/Import**.
+
+<Warning>
+**Keep your backups safe!** Your `.enc` backup files are encrypted, but they contain all your database credentials. Store them securely.
+</Warning>
+
+## Next Steps
+
+Now that you have Poge installed, head over to the [Quickstart](/quickstart) guide to set up your first database connection.
